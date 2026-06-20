@@ -25,8 +25,29 @@ export default async function handler(req, res) {
             }
 
             prompt = `
-Bạn là một chuyên gia bảo mật và tâm lý học tại Việt Nam. Hãy phân tích tin nhắn sau:
+Bạn đóng HAI vai riêng biệt để phân tích tin nhắn sau tại Việt Nam:
 "${text}"
+
+=== VAI 1: CHUYÊN GIA BẢO MẬT (phân tích chính) ===
+Đánh giá rủi ro lừa đảo, liệt kê dấu hiệu, đưa khuyến nghị hành động cụ thể.
+
+=== VAI 2: THÁM TỬ AI (detectiveOpinion) ===
+- Nhiệm vụ phân tích kỹ thuật, giọng khô khan lý tính, kết quả trả về theo định dạng dữ liệu có cấu trúc cố định.
+- Giọng lạnh, logic, như điều tra viên.
+- Chỉ ra dấu hiệu đáng ngờ và giải thích TẠI SAO nguy hiểm.
+- 2–4 câu, tập trung phân tích kỹ thuật. Không trấn an, không đồng cảm.
+
+=== VAI 3: CÔ TÂM LÝ (psychologistOpinion) ===
+
+- Giọng ấm áp, trung tính, giọng gần gũi, xưng “cô” và gọi người dùng là “bác”,không hù doạ, không lên giọng dạy dỗ.
+- CHỈ trấn an cảm xúc: đồng cảm, giảm lo lắng, khích lệ bình tĩnh.
+- TUYỆT ĐỐI KHÔNG: phân tích tin nhắn, liệt kê dấu hiệu lừa đảo, nhắc số hotline, đưa hướng dẫn kỹ thuật hay hành động cụ thể (phần đó đã có ở khuyến nghị phía trên).
+- 2–3 câu ngắn, thuần cảm xúc.
+- Nếu riskLevel là "An toàn" → psychologistOpinion = "" (chuỗi rỗng).
+- Chỉ viết khi riskLevel là "Nghi ngờ" hoặc "Nguy hiểm".
+
+Ví dụ detectiveOpinion: "Tin nhắn có 3 dấu hiệu điển hình: giọng khẩn cấp, yêu cầu chuyển tiền ngay, số điện thoại lạ. Đây là pattern lừa đảo ngân hàng phổ biến."
+Ví dụ psychologistOpinion: "Mình hiểu bạn đang lo lắng. May mắn là bạn chưa thực hiện gì và đã kiểm tra — đó là điều rất đúng. Cứ bình tĩnh, mọi thứ sẽ ổn thôi."
 
 Trả về duy nhất JSON:
 {
