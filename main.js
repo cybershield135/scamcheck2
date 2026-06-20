@@ -2,6 +2,7 @@ import { UI } from './ui.js';
 import { analyzeMessage } from './gemini.js';
 import { saveToHistory, getHistory, clearAllHistory } from './storage.js';
 import { initQuiz, initLibrary, initLinkScanner, initCanvasShare } from './features.js';
+import './config.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize Features
