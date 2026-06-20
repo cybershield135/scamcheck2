@@ -3,7 +3,7 @@ import { scanLink } from './gemini.js';
 // Quiz Data
 const QUIZ_QUESTIONS = [
     {
-        text: "[VCB] Tai khoan cua ban bi khoa. Vui long dang nhap http://vcb-security.xyz de xac thuc.",
+        text: "[VCB] Tài khoản của bạn bị khoá. Vui lòng đăng nhập http://vcb-security.xyz dể xác thực.",
         type: "scam",
         explanation: "Ngân hàng không bao giờ gửi link yêu cầu đăng nhập qua SMS với tên miền lạ (.xyz)."
     },
