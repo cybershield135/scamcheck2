@@ -1,4 +1,5 @@
-import CONFIG from "./config.js";
+const API_URL =
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
 export default async function handler(req, res) {
     if (req.method !== "POST") {
@@ -6,13 +7,15 @@ export default async function handler(req, res) {
     }
 
     try {
-        if (!CONFIG.GEMINI_API_KEY) {
+        const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+        if (!GEMINI_API_KEY) {
             return res.status(500).json({
                 error: "Missing GEMINI_API_KEY on backend"
             });
         }
 
-        const { type, text, url } = req.body;
+        const { type, text, url } = req.body || {};
 
         let prompt = "";
 
@@ -22,10 +25,10 @@ export default async function handler(req, res) {
             }
 
             prompt = `
-Bạn là một chuyên gia bảo mật và tâm lý học tại Việt Nam. Hãy phân tích tin nhắn sau để tìm dấu hiệu lừa đảo:
+Bạn là một chuyên gia bảo mật và tâm lý học tại Việt Nam. Hãy phân tích tin nhắn sau:
 "${text}"
 
-Hãy trả về duy nhất JSON theo mẫu:
+Trả về duy nhất JSON:
 {
   "riskScore": 0,
   "riskLevel": "An toàn",
@@ -46,8 +49,6 @@ Hãy trả về duy nhất JSON theo mẫu:
   },
   "links": []
 }
-
-Chỉ trả về JSON, không thêm giải thích ngoài JSON.
 `;
         } else if (type === "link") {
             if (!url) {
@@ -61,19 +62,17 @@ Bạn là chuyên gia phân tích bảo mật. Hãy soi đường dẫn sau:
 Trả về duy nhất JSON:
 {
   "url": "${url}",
-  "status": "Nguy hiểm",
+  "status": "Cảnh báo",
   "riskScore": 0,
   "analysis": "Phân tích chi tiết",
   "recommendation": "Lời khuyên cụ thể"
 }
-
-Chỉ trả về JSON, không thêm giải thích ngoài JSON.
 `;
         } else {
             return res.status(400).json({ error: "Invalid request type" });
         }
 
-        const response = await fetch(`${CONFIG.API_URL}?key=${CONFIG.GEMINI_API_KEY}`, {
+        const response = await fetch(`${API_URL}?key=${GEMINI_API_KEY}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -87,16 +86,15 @@ Chỉ trả về JSON, không thêm giải thích ngoài JSON.
             })
         });
 
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            console.error("Gemini API error:", errData);
+        const data = await response.json();
 
+        if (!response.ok) {
+            console.error("Gemini API error:", data);
             return res.status(response.status).json({
-                error: errData.error?.message || "Gemini API request failed"
+                error: data.error?.message || "Gemini API request failed"
             });
         }
 
-        const data = await response.json();
         const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (!resultText) {
@@ -109,15 +107,14 @@ Chỉ trả về JSON, không thêm giải thích ngoài JSON.
 
         if (!jsonMatch) {
             return res.status(500).json({
-                error: "Invalid Gemini JSON format"
+                error: "Invalid Gemini JSON format",
+                raw: resultText
             });
         }
 
-        const parsed = JSON.parse(jsonMatch[0]);
-        return res.status(200).json(parsed);
+        return res.status(200).json(JSON.parse(jsonMatch[0]));
     } catch (error) {
         console.error("Backend error:", error);
-
         return res.status(500).json({
             error: error.message || "Internal server error"
         });

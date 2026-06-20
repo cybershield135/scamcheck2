@@ -21,10 +21,20 @@ async function callBackend(payload) {
         body: JSON.stringify(payload)
     });
 
-    if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || "Backend request failed");
+    const responseText = await response.text();
+
+    let data;
+    try {
+        data = JSON.parse(responseText);
+    } catch {
+        data = { error: responseText };
     }
 
-    return response.json();
+    if (!response.ok) {
+        console.error("Backend status:", response.status);
+        console.error("Backend response:", data);
+        throw new Error(data.error || `Backend error ${response.status}`);
+    }
+
+    return data;
 }
