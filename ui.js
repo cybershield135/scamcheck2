@@ -212,3 +212,25 @@ export const UI = {
         window.speechSynthesis.speak(utterance);
     }
 };
+
+
+export function displayAnalysisResult(data) {
+
+    UI.detectiveOpinion.innerText = data.detective.opinion;
+
+    const psychologistCard = document.getElementById('psychologistCard');
+    const psychologistOpinion = document.getElementById('psychologistOpinion');
+
+    if (data.psychologist) {
+        psychologistCard.classList.remove('hidden');
+        psychologistOpinion.innerText = data.psychologist;
+        
+        if (data.isPsychologistError) {
+            psychologistOpinion.classList.add('text-slate-500', 'italic');
+        } else {
+            psychologistOpinion.classList.remove('text-slate-500', 'italic');
+        }
+    } else {
+        psychologistCard.classList.add('hidden');
+    }
+}

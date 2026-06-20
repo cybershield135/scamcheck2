@@ -21,20 +21,32 @@ async function callBackend(payload) {
         body: JSON.stringify(payload)
     });
 
-    const responseText = await response.text();
-
-    let data;
-    try {
-        data = JSON.parse(responseText);
-    } catch {
-        data = { error: responseText };
-    }
-
     if (!response.ok) {
-        console.error("Backend status:", response.status);
-        console.error("Backend response:", data);
-        throw new Error(data.error || `Backend error ${response.status}`);
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Backend request failed");
     }
 
-    return data;
+    return response.json();
+}
+
+export async function handleFullAnalysis(text) {
+    const detectiveResult = await analyzeMessageWithDetective(text); 
+    
+    let psychologistOpinion = null;
+    let isPsychologistError = false;
+    if (detectiveResult.riskLevel === "Nghi ngờ" || detectiveResult.riskLevel === "Nguy hiểm") {
+        try {
+            psychologistOpinion = await analyzeMessageWithPsychologist(text);
+        } catch (error) {
+            console.error("Lỗi tầng Cô tâm lý:", error);
+            isPsychologistError = true;
+            psychologistOpinion = "Bác ơi, hiện tại cô đang bận hỗ trợ một ca trực tuyến khác mất rồi. Bác xem trước kết quả từ Thám tử AI giúp cô và hãy thử hỏi lại cô sau nhé ạ!";
+        }
+    }
+
+    return {
+        detective: detectiveResult,
+        psychologist: psychologistOpinion,
+        isPsychologistError: isPsychologistError
+    };
 }
