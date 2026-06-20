@@ -1,5 +1,4 @@
-const API_URL =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+import CONFIG from "./config.js";
 
 export default async function handler(req, res) {
     if (req.method !== "POST") {
@@ -123,27 +122,4 @@ Chỉ trả về JSON, không thêm giải thích ngoài JSON.
             error: error.message || "Internal server error"
         });
     }
-}
-
-
-export async function handleFullAnalysis(text) {
-    const detectiveResult = await analyzeMessageWithDetective(text); 
-    
-    let psychologistOpinion = null;
-    let isPsychologistError = false;
-    if (detectiveResult.riskLevel === "Nghi ngờ" || detectiveResult.riskLevel === "Nguy hiểm") {
-        try {
-            psychologistOpinion = await analyzeMessageWithPsychologist(text);
-        } catch (error) {
-            console.error("Lỗi tầng Cô tâm lý:", error);
-            isPsychologistError = true;
-            psychologistOpinion = "Bác ơi, hiện tại cô đang bận hỗ trợ một ca trực tuyến khác mất rồi. Bác xem trước kết quả từ Thám tử AI giúp cô và hãy thử hỏi lại cô sau nhé ạ!";
-        }
-    }
-
-    return {
-        detective: detectiveResult,
-        psychologist: psychologistOpinion,
-        isPsychologistError: isPsychologistError
-    };
 }
