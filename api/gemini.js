@@ -48,7 +48,7 @@ Bạn đóng HAI vai riêng biệt để phân tích tin nhắn sau tại Việt
 ===
 Ví dụ detectiveOpinion: "Tin nhắn có 3 dấu hiệu điển hình: giọng khẩn cấp, yêu cầu chuyển tiền ngay, số điện thoại lạ. Đây là pattern lừa đảo ngân hàng phổ biến."
 Ví dụ psychologistOpinion: "Mình hiểu bạn đang lo lắng. May mắn là bạn chưa thực hiện gì và đã kiểm tra — đó là điều rất đúng. Cứ bình tĩnh, mọi thứ sẽ ổn thôi."
-Nếu bôi đen bất kì chữ nào hoặc gạch đầu dòng thì format html.
+Nếu bôi đen bất kì chữ nào hoặc gạch đầu dòng thì format bôi đen và gạch đầu dòng trên html.
 
 Trả về duy nhất JSON:
 {
