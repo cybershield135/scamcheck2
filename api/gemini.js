@@ -51,8 +51,8 @@ Ví dụ detectiveOpinion: "Tin nhắn có 3 dấu hiệu điển hình: giọng
 Ví dụ psychologistOpinion: "Mình hiểu bạn đang lo lắng. May mắn là bạn chưa thực hiện gì và đã kiểm tra — đó là điều rất đúng. Cứ bình tĩnh, mọi thứ sẽ ổn thôi."
 Nếu bôi đen bất kì chữ nào hoặc gạch đầu dòng thì format bôi đen và gạch đầu dòng trên html.
 Không bôi đen bất kì chữ nào hoặc gạch đầu dòng trong phần Đoạn tin nhắn đáng ngờ, Thám tử AI, Cô Tâm Lý.
-Remove tất cả undefined ở trong phần Links.
-"highlightedText" mỗi phần tử đặt trong "", cách nhau bởi dấu phẩy.
+Check và remove tất cả các undefined ở trong phần "links"
+"highlightedText" mỗi phần tử đặt trong "", các phần tử cách nhau bởi dấu phẩy.
 
 Trả về duy nhất JSON:
 {
