@@ -1,139 +1,5 @@
-const BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
-
-// Thử model nhẹ trước (ít bị "high demand"), rồi fallback
-const MODEL_FALLBACKS = [
-    process.env.GEMINI_MODEL,
-    "gemini-2.5-flash-lite",
-    "gemini-2.5-flash",
-    "gemini-2.0-flash-lite"
-].filter(Boolean).filter((m, i, arr) => arr.indexOf(m) === i);
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function isRetryable(status, message = "") {
-    const msg = message.toLowerCase();
-    return (
-        status === 429 ||
-        status === 503 ||
-        status === 500 ||
-        msg.includes("high demand") ||
-        msg.includes("overloaded") ||
-        msg.includes("resource exhausted") ||
-        msg.includes("unavailable") ||
-        msg.includes("try again")
-    );
-}
-const DETECTIVE_PROMPT = (text) => `
-Bạn là Thám tử AI — chuyên gia phân tích lừa đảo tại Việt Nam.
-Giọng khô khan, lý tính, như điều tra viên. Không trấn an, không đồng cảm.
-
-Phân tích tin nhắn sau:
-"${text}"
-
-Trả về DUY NHẤT JSON với cấu trúc cố định:
-{
-  "riskScore": 0,
-  "riskLevel": "An toàn",
-  "riskTitle": "Tiêu đề ngắn gọn",
-  "riskDescription": "Mô tả chi tiết",
-  "signs": [
-    { "description": "Mô tả dấu hiệu", "excerpt": "Đoạn trích nguyên văn từ tin gốc" }
-  ],
-  "actions": ["Hành động 1", "Hành động 2", "Hành động 3"],
-  "detectiveOpinion": "2-4 câu phân tích kỹ thuật"
-}
-
-Quy tắc:
-- riskLevel chỉ được là "An toàn", "Nghi ngờ" hoặc "Nguy hiểm".
-- signs: mỗi dấu hiệu phải có excerpt là đoạn trích NGUYÊN VĂN từ tin gốc.
-- actions: đúng 3 hành động cụ thể người dùng nên làm hoặc không nên làm.
-- Không markdown, không giải thích ngoài JSON.
-`;
-
-const PSYCHOLOGIST_PROMPT = (text, riskLevel) => `
-Bạn là Cô tâm lý — giọng gần gũi, ấm áp.
-Xưng "cô", gọi người dùng là "bác". Không hù doạ, không lên giọng dạy dỗ.
-
-Tin nhắn nghi ngờ (mức ${riskLevel}):
-"${text}"
-
-Viết đúng 2-3 câu giải thích chiêu thức tâm lý kẻ lừa đảo đã dùng.
-Không phân tích kỹ thuật, không liệt kê bằng chứng, không nhắc số hotline.
-Chỉ trả về văn bản thuần, không JSON, không markdown.
-`;
-
-const LINK_PROMPT = (url) => `
-Bạn là chuyên gia phân tích bảo mật. Hãy soi đường dẫn sau:
-"${url}"
-
-Trả về duy nhất JSON:
-{
-  "url": "${url}",
-  "status": "Cảnh báo",
-  "riskScore": 0,
-  "analysis": "Phân tích chi tiết",
-  "recommendation": "Lời khuyên cụ thể"
-}
-`;
-
-async function callGemini(apiKey, prompt) {
-    let lastError = new Error("Gemini API request failed");
-
-    for (const model of MODEL_FALLBACKS) {
-        for (let attempt = 0; attempt < 3; attempt++) {
-            const url = `${BASE_URL}/${model}:generateContent?key=${apiKey}`;
-
-            try {
-                const response = await fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
-                    })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    const msg = data.error?.message || "Gemini API request failed";
-                    lastError = new Error(msg);
-                    if (isRetryable(response.status, msg)) {
-                        await sleep(500 * 2 ** attempt);
-                        continue;
-                    }
-                    throw lastError;
-                }
-
-                const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!resultText) {
-                    lastError = new Error("Empty Gemini response");
-                    continue;
-                }
-
-                console.log(`Gemini OK: ${model} (attempt ${attempt + 1})`);
-                return resultText;
-            } catch (error) {
-                lastError = error;
-                if (isRetryable(0, error.message)) {
-                    await sleep(500 * 2 ** attempt);
-                    continue;
-                }
-                throw error;
-            }
-        }
-        console.warn(`Model ${model} unavailable, trying next...`);
-    }
-
-    throw lastError;
-}
-
-function extractJson(text) {
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-        throw new Error("Invalid Gemini JSON format");
-    }
-    return JSON.parse(jsonMatch[0]);
-}
+const API_URL =
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 export default async function handler(req, res) {
     if (req.method !== "POST") {
@@ -149,87 +15,129 @@ export default async function handler(req, res) {
             });
         }
 
-        const { type, text, url, riskLevel, scenario, riskTitle, hotlines } = req.body || {};
+        const { type, text, url } = req.body || {};
+
         let prompt = "";
 
-        if (type === "detective") {
+        if (type === "message") {
             if (!text) {
                 return res.status(400).json({ error: "Missing message text" });
             }
-            prompt = DETECTIVE_PROMPT(text);
-        } else if (type === "psychologist") {
-            if (!text) {
-                return res.status(400).json({ error: "Missing message text" });
-            }
-            prompt = PSYCHOLOGIST_PROMPT(text, riskLevel || "Nghi ngờ");
+
+            prompt = `
+Bạn đóng HAI vai riêng biệt để phân tích tin nhắn sau tại Việt Nam:
+"${text}"
+
+=== VAI 1: CHUYÊN GIA BẢO MẬT (phân tích chính) ===
+Đánh giá rủi ro lừa đảo, liệt kê dấu hiệu, đưa khuyến nghị hành động cụ thể.
+
+=== VAI 2: THÁM TỬ AI (detectiveOpinion) ===
+- Nhiệm vụ phân tích kỹ thuật, giọng khô khan lý tính, kết quả trả về theo định dạng dữ liệu có cấu trúc cố định.
+- Giọng lạnh, logic, như điều tra viên.
+- Chỉ ra dấu hiệu đáng ngờ và giải thích TẠI SAO nguy hiểm.
+- 2–4 câu, tập trung phân tích kỹ thuật. Không trấn an, không đồng cảm.
+
+=== VAI 3: CÔ TÂM LÝ (psychologistOpinion) ===
+
+- Giọng ấm áp, trung tính, xưng hô "bạn" — vừa trấn an vừa định hướng nhẹ nhàng.
+- Cấu trúc: (1) đồng cảm, giảm lo lắng → (2) gợi ý hành động an toàn bằng lời khuyên mềm, không ra lệnh.
+- ĐƯỢC nhắc hướng dẫn thực tế, ví dụ: đừng bấm link, đừng chuyển tiền, đừng cung cấp mã OTP, chặn số lạ, xóa tin nhắn, hỏi người thân — tùy theo nội dung tin nhắn.
+- TUYỆT ĐỐI KHÔNG: phân tích dấu hiệu lừa đảo, giải thích kỹ thuật, liệt kê bằng chứng, nhắc số hotline (phần phân tích thuộc Thám tử, phần chi tiết thuộc khuyến nghị).
+- 3–4 câu: ấm áp nhưng có định hướng rõ ràng.
+- Nếu riskLevel là "An toàn" → psychologistOpinion = "" (chuỗi rỗng).
+- Chỉ viết khi riskLevel là "Nghi ngờ" hoặc "Nguy hiểm".
+===
+Ví dụ detectiveOpinion: "Tin nhắn có 3 dấu hiệu điển hình: giọng khẩn cấp, yêu cầu chuyển tiền ngay, số điện thoại lạ. Đây là pattern lừa đảo ngân hàng phổ biến."
+Ví dụ psychologistOpinion: "Mình hiểu bạn đang lo lắng. May mắn là bạn chưa thực hiện gì và đã kiểm tra — đó là điều rất đúng. Cứ bình tĩnh, mọi thứ sẽ ổn thôi."
+Không bôi đen bất kì chữ nào hoặc gạch đầu dòng trong phần "highlightedText", "detectiveOpinion", "psychologistOpinion". Nếu bôi đen bất kì chữ nào hoặc gạch đầu dòng thì format bôi đen và gạch đầu dòng trên html.
+Check và remove tất cả các undefined ở trong phần "links".
+"highlightedText" mỗi phần tử đặt trong "" riêng của nó, các phần tử cách nhau bởi dấu phẩy.
+
+Trả về duy nhất JSON:
+{
+  "riskScore": 0,
+  "riskLevel": "An toàn",
+  "riskTitle": "Tiêu đề ngắn gọn",
+  "riskDescription": "Mô tả chi tiết",
+  "signs": [],
+  "highlightedText": [],
+  "recommendations": {
+    "shouldDo": [],
+    "shouldNotDo": []
+  },
+  "detectiveOpinion": "",
+  "psychologistOpinion": "",
+  "emergencyActions": {
+    "transfer": [],
+    "link": [],
+    "otp": []
+  },
+  "links": []
+}
+`;
         } else if (type === "link") {
             if (!url) {
                 return res.status(400).json({ error: "Missing URL" });
             }
-            prompt = LINK_PROMPT(url);
-        } else if (type === "message") {
-            if (!text) {
-                return res.status(400).json({ error: "Missing message text" });
-            }
-            prompt = DETECTIVE_PROMPT(text);
-        } else if (type === "rescuer") {
-            const { scenario, riskTitle, hotlines } = req.body || {};
-            if (!text || !scenario || !hotlines) {
-                return res.status(400).json({ error: "Missing rescuer context" });
-            }
-            const hotlineText = [
-                ...hotlines.banks.map((b) => `${b.name}: ${b.phone}`),
-                ...hotlines.authorities.map((a) => `${a.name}: ${a.phone}`)
-            ].join("\n");
-
-            const scenarioVi = {
-                link: "Đã bấm vào đường dẫn trong tin nhắn",
-                transfer: "Đã chuyển khoản cho kẻ lừa đảo",
-                otp: "Đã cung cấp mã xác thực OTP"
-            }[scenario] || scenario;
 
             prompt = `
-Bạn là Người ứng cứu — giọng bình tĩnh, dứt khoát.
-Không an ủi, không phân tích, không cảm thán. Chỉ đưa hành động cụ thể.
+Bạn là chuyên gia phân tích bảo mật. Hãy soi đường dẫn sau:
+"${url}"
 
-Người dùng (gọi là bác) vừa kiểm tra tin nhắn lừa đảo.
-Tình huống bác chọn: ${scenarioVi}
-Mức rủi ro Thám tử: ${riskLevel || "Nguy hiểm"}
-Tóm tắt: ${riskTitle || "Tin nhắn lừa đảo"}
-
-Tin nhắn gốc:
-"${text}"
-
-CHỈ được dùng số điện thoại từ danh sách sau (KHÔNG tự nghĩ thêm số nào):
-${hotlineText}
-
-Trả về DUY NHẤT JSON:
+Trả về duy nhất JSON:
 {
-  "steps": [
-    { "action": "Mô tả bước ngắn gọn", "script": "Câu nói mẫu bác đọc khi gọi điện" }
-  ]
+  "url": "${url}",
+  "status": "Cảnh báo",
+  "riskScore": 0,
+  "analysis": "Phân tích chi tiết",
+  "recommendation": "Lời khuyên cụ thể"
 }
-
-Quy tắc:
-- 4 đến 6 bước, đánh số logic theo thứ tự ưu tiên khẩn cấp.
-- Mỗi bước gọi điện phải có script và số từ danh sách trên.
-- Không markdown, không JSON lồng thêm.
 `;
         } else {
             return res.status(400).json({ error: "Invalid request type" });
         }
 
-        const resultText = await callGemini(GEMINI_API_KEY, prompt);
+        const response = await fetch(`${API_URL}?key=${GEMINI_API_KEY}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                contents: [
+                    {
+                        parts: [{ text: prompt }]
+                    }
+                ]
+            })
+        });
 
-        if (type === "psychologist") {
-            return res.status(200).json({ opinion: resultText.trim() });
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error("Gemini API error:", data);
+            return res.status(response.status).json({
+                error: data.error?.message || "Gemini API request failed"
+            });
         }
 
-        if (type === "rescuer") {
-            return res.status(200).json(extractJson(resultText));
+        const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!resultText) {
+            return res.status(500).json({
+                error: "Empty Gemini response"
+            });
         }
 
-        return res.status(200).json(extractJson(resultText));
+        const jsonMatch = resultText.match(/\{[\s\S]*\}/);
+
+        if (!jsonMatch) {
+            return res.status(500).json({
+                error: "Invalid Gemini JSON format",
+                raw: resultText
+            });
+        }
+
+        return res.status(200).json(JSON.parse(jsonMatch[0]));
     } catch (error) {
         console.error("Backend error:", error);
         return res.status(500).json({
