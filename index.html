@@ -261,20 +261,24 @@
                     </div>
                 </div>
 
-                <!-- Emergency Section -->
-                <div id="emergencySection" class="mt-12 bg-red-50 p-8 rounded-3xl border-2 border-red-200 hidden">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="w-12 h-12 bg-danger text-white rounded-2xl flex items-center justify-center text-2xl animate-pulse">🚨</div>
-                        <h4 class="text-2xl font-bold text-danger">Hướng dẫn xử lý khẩn cấp</h4>
+                <!-- Crisis / Rescuer Section (Cấp 5) -->
+                <div id="crisisSection" class="mt-12 bg-red-50 p-8 rounded-3xl border-2 border-red-200 hidden">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-danger text-white rounded-2xl flex items-center justify-center text-2xl">🆘</div>
+                        <h4 class="text-2xl font-bold text-danger">Bác đã làm gì rồi?</h4>
                     </div>
-                    <p class="mb-6 font-semibold text-slate-700">Nếu bác đã lỡ thực hiện các hành động dưới đây, hãy làm theo các bước sau:</p>
-                    <div class="flex flex-wrap gap-4 mb-8">
-                        <button class="emergency-btn bg-white border-2 border-red-100 px-6 py-3 rounded-2xl font-bold hover:bg-red-500 hover:text-white transition-all shadow-sm" data-type="transfer">💸 Đã chuyển tiền</button>
-                        <button class="emergency-btn bg-white border-2 border-red-100 px-6 py-3 rounded-2xl font-bold hover:bg-red-500 hover:text-white transition-all shadow-sm" data-type="link">🔗 Đã bấm vào link</button>
-                        <button class="emergency-btn bg-white border-2 border-red-100 px-6 py-3 rounded-2xl font-bold hover:bg-red-500 hover:text-white transition-all shadow-sm" data-type="otp">🔑 Đã cung cấp OTP</button>
+                    <p class="mb-6 text-slate-700 text-lg">Chọn một đáp án để nhận hướng dẫn xử lý phù hợp:</p>
+                    <div id="crisisChoices" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <button class="crisis-btn bg-white border-2 border-green-200 px-6 py-4 rounded-2xl font-bold text-lg hover:bg-green-500 hover:text-white transition-all text-left" data-scenario="nothing">✅ Chưa làm gì</button>
+                        <button class="crisis-btn bg-white border-2 border-red-100 px-6 py-4 rounded-2xl font-bold text-lg hover:bg-red-500 hover:text-white transition-all text-left" data-scenario="link">🔗 Đã bấm vào đường dẫn</button>
+                        <button class="crisis-btn bg-white border-2 border-red-100 px-6 py-4 rounded-2xl font-bold text-lg hover:bg-red-500 hover:text-white transition-all text-left" data-scenario="transfer">💸 Đã chuyển khoản</button>
+                        <button class="crisis-btn bg-white border-2 border-red-100 px-6 py-4 rounded-2xl font-bold text-lg hover:bg-red-500 hover:text-white transition-all text-left" data-scenario="otp">🔑 Đã cung cấp mã xác thực</button>
                     </div>
-                    <div id="emergencyTimeline" class="space-y-6">
-                        <!-- Timeline will be injected here -->
+                    <div id="crisisResponse" class="hidden p-6 rounded-2xl bg-white border border-slate-200 mb-6 text-lg leading-relaxed"></div>
+                    <div id="rescuerTimeline" class="space-y-6"></div>
+                    <div id="crisisLoading" class="hidden text-center py-6">
+                        <div class="inline-block w-8 h-8 border-4 border-danger border-t-transparent rounded-full animate-spin"></div>
+                        <p class="mt-2 text-muted font-semibold">Người ứng cứu đang soạn hướng dẫn...</p>
                     </div>
                 </div>
 
@@ -294,7 +298,7 @@
         <section id="link-scanner" class="py-24 bg-slate-50 scroll-mt-20">
             <div class="container mx-auto px-4 max-w-4xl text-center">
                 <h2 class="text-4xl font-extrabold mb-4">Soi Link độc hại</h2>
-                <p class="text-muted text-lg mb-12">Chỉ cần dán đường link, AI sẽ kiểm tra độ an toàn của trang web</p>
+                <p class="text-muted text-lg mb-12">Dán link hoặc dán tin nhắn — hệ thống phát hiện tên miền giả mạo (ví dụ: vietcornbank thay vietcombank)</p>
                 <div class="flex gap-4">
                     <input id="linkInput" type="text" placeholder="Dán link tại đây (ví dụ: http://vcb-web.com)..." class="flex-grow bg-white border-2 border-slate-200 px-6 py-4 rounded-2xl focus:outline-none focus:border-primary text-lg">
                     <button id="scanLinkBtn" class="bg-secondary text-white px-8 py-4 rounded-2xl font-bold text-lg btn-hover">Soi ngay</button>
@@ -318,6 +322,7 @@
                         <button class="lib-filter bg-slate-100 text-muted px-4 py-2 rounded-xl font-bold whitespace-nowrap" data-filter="bank">Ngân hàng</button>
                         <button class="lib-filter bg-slate-100 text-muted px-4 py-2 rounded-xl font-bold whitespace-nowrap" data-filter="police">Công an</button>
                         <button class="lib-filter bg-slate-100 text-muted px-4 py-2 rounded-xl font-bold whitespace-nowrap" data-filter="gift">Trúng thưởng</button>
+                        <button class="lib-filter bg-slate-100 text-muted px-4 py-2 rounded-xl font-bold whitespace-nowrap" data-filter="delivery">Giao hàng</button>
                     </div>
                 </div>
                 <div id="libraryGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -325,6 +330,17 @@
                 </div>
             </div>
         </section>
+
+        <!-- Library Detail Modal -->
+        <div id="libraryModal" class="fixed inset-0 z-[100] hidden bg-black/50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl fade-in max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 id="libraryModalTitle" class="text-2xl font-extrabold text-slate-900 pr-4"></h3>
+                    <button id="libraryModalClose" class="text-muted hover:text-danger text-2xl font-bold leading-none">&times;</button>
+                </div>
+                <div id="libraryModalBody"></div>
+            </div>
+        </div>
 
         <!-- History Section -->
         <section id="history" class="py-24 bg-slate-50 scroll-mt-20">
@@ -361,7 +377,9 @@
                         <button class="quiz-choice-btn bg-danger/20 hover:bg-danger/60 border-2 border-danger/50 p-6 rounded-3xl text-xl font-bold transition-all transform hover:-translate-y-1" data-choice="scam">🚨 Lừa đảo</button>
                         <button class="quiz-choice-btn bg-success/20 hover:bg-success/60 border-2 border-success/50 p-6 rounded-3xl text-xl font-bold transition-all transform hover:-translate-y-1" data-choice="safe">✅ An toàn</button>
                     </div>
+                    <div id="quizFeedback" class="hidden mt-6 p-4 rounded-2xl text-lg"></div>
                 </div>
+                <div id="quizSummary" class="hidden bg-white/10 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/20 shadow-2xl"></div>
             </div>
             <!-- Decorative circles -->
             <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">

@@ -21,8 +21,11 @@ export const UI = {
     detectiveOpinion: document.getElementById('detectiveOpinion'),
     psychologistCard: document.getElementById('psychologistCard'),
     psychologistOpinion: document.getElementById('psychologistOpinion'),
-    emergencySection: document.getElementById('emergencySection'),
-    emergencyTimeline: document.getElementById('emergencyTimeline'),
+    crisisSection: document.getElementById('crisisSection'),
+    crisisChoices: document.getElementById('crisisChoices'),
+    crisisResponse: document.getElementById('crisisResponse'),
+    rescuerTimeline: document.getElementById('rescuerTimeline'),
+    crisisLoading: document.getElementById('crisisLoading'),
     historyList: document.getElementById('historyList'),
     clearAllHistory: document.getElementById('clearAllHistory'),
     shareBtn: document.getElementById('shareBtn'),
@@ -36,7 +39,8 @@ export const UI = {
 
     // State
     ttsEnabled: true,
-    currentEmergencyActions: null,
+    crisisLocked: false,
+    lastAnalysisContext: null,
 
     showLoading() {
         this.resultArea.classList.remove('hidden');
@@ -99,18 +103,24 @@ export const UI = {
             </li>
         `).join('');
 
-        // Link Analysis
+        // Link Analysis (Cấp 4-B)
         if (result.links && result.links.length > 0) {
             this.linkAnalysisSection.classList.remove('hidden');
-            this.linksList.innerHTML = result.links.map(link => `
-                <div class="p-4 rounded-2xl border-2 ${link.status === 'Nguy hiểm' ? 'border-danger/20 bg-danger/5' : 'border-warning/20 bg-warning/5'}">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="font-mono font-bold break-all">${link.url}</span>
-                        <span class="px-3 py-1 rounded-full text-xs font-bold text-white ${link.status === 'Nguy hiểm' ? 'bg-danger' : 'bg-warning'}">${link.status}</span>
+            this.linksList.innerHTML = result.links.map(link => {
+                const isDanger = link.status === 'Nguy hiểm';
+                const isWarn = link.status === 'Nghi ngờ';
+                const border = isDanger ? 'border-danger/20 bg-danger/5' : isWarn ? 'border-warning/20 bg-warning/5' : 'border-success/20 bg-success/5';
+                const badge = isDanger ? 'bg-danger' : isWarn ? 'bg-warning' : 'bg-success';
+                return `
+                <div class="p-4 rounded-2xl border-2 ${border}">
+                    <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
+                        <span class="font-mono font-bold break-all text-base">${link.url}</span>
+                        <span class="px-3 py-1 rounded-full text-xs font-bold text-white ${badge}">${link.status}</span>
                     </div>
                     <p class="text-sm text-slate-600">${link.reason}</p>
+                    ${isDanger ? '<p class="text-danger font-bold text-sm mt-2">⚠️ KHÔNG bấm vào link này!</p>' : ''}
                 </div>
-            `).join('');
+            `}).join('');
         } else {
             this.linkAnalysisSection.classList.add('hidden');
         }
@@ -129,9 +139,22 @@ export const UI = {
             this.psychologistCard.classList.add('hidden');
         }
 
-        // Emergency
-        this.emergencySection.classList.add('hidden');
-        this.currentEmergencyActions = result.emergencyActions;
+        // Crisis section (Cấp 5) — show for risky messages
+        this.lastAnalysisContext = result;
+        this.crisisLocked = false;
+        this.crisisResponse.classList.add('hidden');
+        this.rescuerTimeline.innerHTML = '';
+        this.crisisLoading.classList.add('hidden');
+        this.crisisChoices.querySelectorAll('.crisis-btn').forEach((btn) => {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'ring-4', 'ring-primary');
+        });
+
+        if (result.riskLevel === 'Nghi ngờ' || result.riskLevel === 'Nguy hiểm') {
+            this.crisisSection.classList.remove('hidden');
+        } else {
+            this.crisisSection.classList.add('hidden');
+        }
 
         // Speak
         if (this.ttsEnabled) {
@@ -168,21 +191,36 @@ export const UI = {
         });
     },
 
-    renderEmergencyTimeline(type) {
-        const steps = this.currentEmergencyActions[type];
-        this.emergencySection.classList.remove('hidden');
-        this.emergencyTimeline.innerHTML = steps.map((step, index) => `
+    renderRescuerSteps(steps) {
+        this.rescuerTimeline.innerHTML = (steps || []).map((step, index) => `
             <div class="flex gap-4 fade-in">
                 <div class="flex flex-col items-center">
                     <div class="w-10 h-10 bg-danger text-white rounded-full flex items-center justify-center font-bold flex-shrink-0 shadow-lg shadow-red-200">${index + 1}</div>
                     ${index < steps.length - 1 ? '<div class="w-0.5 h-full bg-danger/20 my-1"></div>' : ''}
                 </div>
-                <div class="pb-6">
-                    <p class="text-lg font-bold text-slate-800">${step}</p>
+                <div class="pb-6 flex-grow">
+                    <p class="text-lg font-bold text-slate-800 mb-2">${step.action}</p>
+                    ${step.script ? `<p class="text-slate-600 italic bg-white p-4 rounded-xl border border-slate-200">📞 "${step.script}"</p>` : ''}
                 </div>
             </div>
         `).join('');
-        this.emergencyTimeline.scrollIntoView({ behavior: 'smooth' });
+        this.rescuerTimeline.scrollIntoView({ behavior: 'smooth' });
+    },
+
+    showCrisisPraise(message) {
+        this.crisisResponse.classList.remove('hidden');
+        this.crisisResponse.className = 'p-6 rounded-2xl bg-green-50 border border-green-200 mb-6 text-lg leading-relaxed text-green-900 font-medium';
+        this.crisisResponse.textContent = message;
+    },
+
+    lockCrisisChoice(selectedBtn) {
+        this.crisisLocked = true;
+        this.crisisChoices.querySelectorAll('.crisis-btn').forEach((btn) => {
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+        });
+        selectedBtn.classList.remove('opacity-50');
+        selectedBtn.classList.add('ring-4', 'ring-primary');
     },
 
     renderLinkScan(result) {

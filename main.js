@@ -2,6 +2,7 @@ import { UI } from './ui.js';
 import { analyzeMessage } from './gemini.js';
 import { saveToHistory, getHistory, clearAllHistory } from './storage.js';
 import { initQuiz, initLibrary, initLinkScanner, initCanvasShare } from './features.js';
+import { callRescuer, NOTHING_PRAISE } from './rescuer.js';
 
 const MAX_MESSAGE_LENGTH = 5000;
 
@@ -33,10 +34,51 @@ function getFriendlyErrorMessage(error) {
     return 'Có lỗi khi phân tích. Bác thử lại sau hoặc hỏi người thân trước khi làm theo tin nhắn.';
 }
 
+function initCrisisFlow() {
+    UI.crisisChoices.querySelectorAll('.crisis-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            if (UI.crisisLocked) return;
+
+            const scenario = btn.dataset.scenario;
+            const ctx = UI.lastAnalysisContext;
+            if (!ctx) return;
+
+            UI.lockCrisisChoice(btn);
+            UI.rescuerTimeline.innerHTML = '';
+            UI.crisisResponse.classList.add('hidden');
+
+            if (scenario === 'nothing') {
+                UI.showCrisisPraise(NOTHING_PRAISE);
+                return;
+            }
+
+            UI.crisisLoading.classList.remove('hidden');
+
+            try {
+                const data = await callRescuer({
+                    text: ctx.originalText || '',
+                    riskLevel: ctx.riskLevel,
+                    scenario,
+                    riskTitle: ctx.riskTitle
+                });
+                UI.crisisLoading.classList.add('hidden');
+                UI.renderRescuerSteps(data.steps);
+            } catch (error) {
+                UI.crisisLoading.classList.add('hidden');
+                UI.showCrisisPraise(
+                    'Không tải được hướng dẫn khẩn cấp. Bác gọi ngay 113 hoặc tổng đài ngân hàng in trên thẻ.'
+                );
+                console.error(error);
+            }
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initQuiz();
     initLibrary();
     initLinkScanner(UI);
+    initCrisisFlow();
 
     let lastResult = null;
 
@@ -121,12 +163,6 @@ document.addEventListener('DOMContentLoaded', () => {
         recognition.onerror = () => {
             UI.voiceBtn.innerText = '🎤 Giọng nói';
         };
-    });
-
-    document.querySelectorAll('.emergency-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            UI.renderEmergencyTimeline(btn.dataset.type);
-        });
     });
 
     UI.clearAllHistory.addEventListener('click', () => {

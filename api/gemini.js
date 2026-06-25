@@ -99,7 +99,7 @@ export default async function handler(req, res) {
             });
         }
 
-        const { type, text, url, riskLevel } = req.body || {};
+        const { type, text, url, riskLevel, scenario, riskTitle, hotlines } = req.body || {};
         let prompt = "";
 
         if (type === "detective") {
@@ -122,6 +122,49 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: "Missing message text" });
             }
             prompt = DETECTIVE_PROMPT(text);
+        } else if (type === "rescuer") {
+            const { scenario, riskTitle, hotlines } = req.body || {};
+            if (!text || !scenario || !hotlines) {
+                return res.status(400).json({ error: "Missing rescuer context" });
+            }
+            const hotlineText = [
+                ...hotlines.banks.map((b) => `${b.name}: ${b.phone}`),
+                ...hotlines.authorities.map((a) => `${a.name}: ${a.phone}`)
+            ].join("\n");
+
+            const scenarioVi = {
+                link: "Đã bấm vào đường dẫn trong tin nhắn",
+                transfer: "Đã chuyển khoản cho kẻ lừa đảo",
+                otp: "Đã cung cấp mã xác thực OTP"
+            }[scenario] || scenario;
+
+            prompt = `
+Bạn là Người ứng cứu — giọng bình tĩnh, dứt khoát.
+Không an ủi, không phân tích, không cảm thán. Chỉ đưa hành động cụ thể.
+
+Người dùng (gọi là bác) vừa kiểm tra tin nhắn lừa đảo.
+Tình huống bác chọn: ${scenarioVi}
+Mức rủi ro Thám tử: ${riskLevel || "Nguy hiểm"}
+Tóm tắt: ${riskTitle || "Tin nhắn lừa đảo"}
+
+Tin nhắn gốc:
+"${text}"
+
+CHỈ được dùng số điện thoại từ danh sách sau (KHÔNG tự nghĩ thêm số nào):
+${hotlineText}
+
+Trả về DUY NHẤT JSON:
+{
+  "steps": [
+    { "action": "Mô tả bước ngắn gọn", "script": "Câu nói mẫu bác đọc khi gọi điện" }
+  ]
+}
+
+Quy tắc:
+- 4 đến 6 bước, đánh số logic theo thứ tự ưu tiên khẩn cấp.
+- Mỗi bước gọi điện phải có script và số từ danh sách trên.
+- Không markdown, không JSON lồng thêm.
+`;
         } else {
             return res.status(400).json({ error: "Invalid request type" });
         }
@@ -130,6 +173,10 @@ export default async function handler(req, res) {
 
         if (type === "psychologist") {
             return res.status(200).json({ opinion: resultText.trim() });
+        }
+
+        if (type === "rescuer") {
+            return res.status(200).json(extractJson(resultText));
         }
 
         return res.status(200).json(extractJson(resultText));

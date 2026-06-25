@@ -1,0 +1,16 @@
+[
+  { "org": "Vietcombank", "domains": ["vietcombank.com.vn", "vcb.com.vn"] },
+  { "org": "BIDV", "domains": ["bidv.com.vn"] },
+  { "org": "VietinBank", "domains": ["vietinbank.vn"] },
+  { "org": "Agribank", "domains": ["agribank.com.vn"] },
+  { "org": "Techcombank", "domains": ["techcombank.com.vn", "tcb.com.vn"] },
+  { "org": "MB Bank", "domains": ["mbbank.com.vn"] },
+  { "org": "ACB", "domains": ["acb.com.vn"] },
+  { "org": "Sacombank", "domains": ["sacombank.com.vn"] },
+  { "org": "VPBank", "domains": ["vpbank.com.vn"] },
+  { "org": "Shopee", "domains": ["shopee.vn", "shopee.com"] },
+  { "org": "Lazada", "domains": ["lazada.vn"] },
+  { "org": "GHN", "domains": ["ghn.vn"] },
+  { "org": "GHTK", "domains": ["giaohangtietkiem.vn"] },
+  { "org": "Vietnam Post", "domains": ["vnpost.vn"] }
+]
