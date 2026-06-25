@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CyberShield - Bảo vệ bạn khỏi lừa đảo</title>
+    <title>ScamCheck - Bảo vệ bạn khỏi lừa đảo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -164,9 +164,9 @@
                         <span class="text-warning font-bold block mb-2 text-sm">👮 Giả công an</span>
                         <p class="text-sm text-muted line-clamp-2">"Bạn có liên quan đến vụ án rửa tiền..."</p>
                     </div>
-                    <div class="sample-card p-4 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:border-primary hover:shadow-md transition-all" data-text="[Giao Hang] Don hang cua ban gap su co. Vui long thanh toan 20.000d phi luu kho tai link: http://shopee-nhanh.com/pay">
-                        <span class="text-secondary font-bold block mb-2 text-sm">📦 Giả giao hàng</span>
-                        <p class="text-sm text-muted line-clamp-2">"Đơn hàng của bạn gặp sự cố..."</p>
+                    <div class="sample-card p-4 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:border-primary hover:shadow-md transition-all" data-text="Chuc mung ban da trung thuong iPhone 15 Pro Max tu Shopee. Lien he Zalo 09xx de nhan giai trong 24 gio.">
+                        <span class="text-secondary font-bold block mb-2 text-sm">🎁 Trúng thưởng</span>
+                        <p class="text-sm text-muted line-clamp-2">"Chúc mừng bạn đã trúng thưởng iPhone..."</p>
                     </div>
                 </div>
             </div>
@@ -219,33 +219,18 @@
                             <!-- JS will inject items here -->
                         </div>
                         <div class="p-4 bg-amber-50 rounded-2xl border-l-4 border-warning">
-                            <span class="text-xs font-bold text-warning uppercase block mb-1">Đoạn tin nhắn đáng ngờ:</span>
-                            <p id="highlightedText" class="italic text-slate-700">"..."</p>
+                            <span class="text-xs font-bold text-warning uppercase block mb-1">Tin gốc (đoạn nghi ngờ được tô vàng):</span>
+                            <div id="highlightedText" class="text-slate-700 leading-relaxed">"..."</div>
                         </div>
                     </div>
 
                     <!-- Actions Card -->
                     <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-lg">
-                        <h4 class="text-xl font-bold mb-6 flex items-center gap-2">✅ Lời khuyên từ AI</h4>
+                        <h4 class="text-xl font-bold mb-6 flex items-center gap-2">✅ Ba việc nên làm tiếp theo</h4>
                         <div class="space-y-6">
-                            <div>
-                                <span class="text-success font-bold flex items-center gap-2 mb-3">
-                                    <span class="w-6 h-6 bg-success/10 rounded-full flex items-center justify-center">✔</span>
-                                    Nên làm:
-                                </span>
-                                <ul id="shouldDo" class="space-y-2 pl-8">
+                            <ul id="shouldDo" class="space-y-2 pl-2">
                                     <!-- JS will inject -->
-                                </ul>
-                            </div>
-                            <div>
-                                <span class="text-danger font-bold flex items-center gap-2 mb-3">
-                                    <span class="w-6 h-6 bg-danger/10 rounded-full flex items-center justify-center">✖</span>
-                                    Tuyệt đối không:
-                                </span>
-                                <ul id="shouldNotDo" class="space-y-2 pl-8">
-                                    <!-- JS will inject -->
-                                </ul>
-                            </div>
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -259,21 +244,19 @@
                 </div>
 
                 <!-- Characters Area -->
-                <div id="charactersArea" class="mt-12 grid md:grid-cols-2 gap-8">
-                    <!-- Detective -->
+                <div id="charactersArea" class="mt-12 space-y-8">
                     <div class="bg-blue-50 p-6 rounded-3xl border border-blue-100 flex gap-4 hover:shadow-md transition-shadow">
                         <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-3xl flex-shrink-0">🕵️</div>
                         <div>
-                            <span class="font-bold text-blue-800">Thám tử AI</span>
-                            <p id="detectiveOpinion" class="text-blue-900 mt-1 leading-relaxed">"Đang phân tích logic..."</p>
+                            <h4 class="font-bold text-blue-800 text-xl mb-2">Phân tích kỹ thuật</h4>
+                            <p id="detectiveOpinion" class="text-blue-900 leading-relaxed">"Đang phân tích logic..."</p>
                         </div>
                     </div>
-                    <!-- Psychologist -->
                     <div id="psychologistCard" class="bg-pink-50 p-6 rounded-3xl border border-pink-100 flex gap-4 hidden hover:shadow-md transition-shadow">
                         <div class="w-16 h-16 bg-pink-500 rounded-2xl flex items-center justify-center text-white text-3xl flex-shrink-0">👩‍⚕️</div>
                         <div>
-                            <span class="font-bold text-pink-800">Cô Tâm Lý</span>
-                            <p id="psychologistOpinion" class="text-pink-900 mt-1 leading-relaxed">"Bác ơi, đừng quá lo lắng..."</p>
+                            <h4 class="font-bold text-pink-800 text-xl mb-2">Hiểu vì sao mình suýt tin</h4>
+                            <p id="psychologistOpinion" class="text-pink-900 leading-relaxed">"Bác ơi, đừng quá lo lắng..."</p>
                         </div>
                     </div>
                 </div>
@@ -396,7 +379,7 @@
                         <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-lg">S</div>
                         <span class="text-xl font-extrabold text-primary">ScamCheck</span>
                     </div>
-                    <p class="text-muted text-lg max-w-md mb-8">ScamCheck là công cụ giáo dục do nhóm học viên phát triển và không thay thế cảnh báo chính thức từ ngân hàng hoặc cơ quan chức năng.</p>
+                    <p class="text-muted text-lg max-w-md mb-8">ScamCheck là công cụ giáo dục do nhóm học viên phát triển và đánh giá của ứng dụng không thay thế cảnh báo chính thức từ ngân hàng hoặc cơ quan chức năng. Khi nghi ngờ, người dùng nên gọi tổng đài chính thức của ngân hàng được in trên thẻ.</p>
                 </div>
                 <div>
                     <h5 class="font-bold mb-6 text-slate-900">Liên kết</h5>
@@ -418,7 +401,7 @@
                 </div>
             </div>
             <div class="pt-12 border-t border-slate-100 text-center">
-                <p class="text-slate-400 text-sm">© 2026 CyberShield Made with ❤️ for Vietnam.</p>
+                <p class="text-slate-400 text-sm">© 2026 ScamCheck — Made with ❤️ for Vietnam.</p>
             </div>
         </div>
     </footer>

@@ -1,3 +1,5 @@
+import { buildHighlightedHtml } from './parseResult.js';
+
 export const UI = {
     // Elements
     messageInput: document.getElementById('messageInput'),
@@ -16,7 +18,6 @@ export const UI = {
     signsList: document.getElementById('signsList'),
     highlightedText: document.getElementById('highlightedText'),
     shouldDo: document.getElementById('shouldDo'),
-    shouldNotDo: document.getElementById('shouldNotDo'),
     detectiveOpinion: document.getElementById('detectiveOpinion'),
     psychologistCard: document.getElementById('psychologistCard'),
     psychologistOpinion: document.getElementById('psychologistOpinion'),
@@ -81,20 +82,20 @@ export const UI = {
             </div>
         `).join('');
 
-        this.highlightedText.innerText = `"${result.highlightedText}"`;
+        const excerpts = result.excerpts || [];
+        const originalText = result.originalText || '';
+        this.highlightedText.innerHTML = buildHighlightedHtml(originalText, excerpts);
 
-        // Recommendations
-        this.shouldDo.innerHTML = result.recommendations.shouldDo.map(item => `
-            <li class="flex items-start gap-2 mb-2">
-                <span class="text-success font-bold">✔</span>
+        // Recommendations — exactly 3 actions (L2-05)
+        const actions = result.actions || [
+            ...(result.recommendations?.shouldDo || []),
+            ...(result.recommendations?.shouldNotDo || [])
+        ].slice(0, 3);
+
+        this.shouldDo.innerHTML = actions.map((item, index) => `
+            <li class="flex items-start gap-2 mb-2 text-lg">
+                <span class="text-primary font-bold">${index + 1}.</span>
                 <span class="text-slate-700">${item}</span>
-            </li>
-        `).join('');
-
-        this.shouldNotDo.innerHTML = result.recommendations.shouldNotDo.map(item => `
-            <li class="flex items-start gap-2 mb-2">
-                <span class="text-danger font-bold">✖</span>
-                <span class="text-slate-700 font-semibold">${item}</span>
             </li>
         `).join('');
 
@@ -119,6 +120,11 @@ export const UI = {
         if (result.psychologistOpinion) {
             this.psychologistCard.classList.remove('hidden');
             this.psychologistOpinion.innerText = `"${result.psychologistOpinion}"`;
+            if (result.isPsychologistError) {
+                this.psychologistOpinion.classList.add('text-slate-500', 'italic');
+            } else {
+                this.psychologistOpinion.classList.remove('text-slate-500', 'italic');
+            }
         } else {
             this.psychologistCard.classList.add('hidden');
         }
@@ -129,7 +135,8 @@ export const UI = {
 
         // Speak
         if (this.ttsEnabled) {
-            this.speak(`Kết quả phân tích: ${result.riskLevel}. ${result.riskTitle}. Lời khuyên: ${result.recommendations.shouldDo[0]}`);
+            const firstAction = actions[0] || 'Hãy thận trọng với tin nhắn này';
+            this.speak(`Kết quả phân tích: ${result.riskLevel}. ${result.riskTitle}. Lời khuyên: ${firstAction}`);
         }
     },
 
@@ -212,25 +219,3 @@ export const UI = {
         window.speechSynthesis.speak(utterance);
     }
 };
-
-
-export function displayAnalysisResult(data) {
-
-    UI.detectiveOpinion.innerText = data.detective.opinion;
-
-    const psychologistCard = document.getElementById('psychologistCard');
-    const psychologistOpinion = document.getElementById('psychologistOpinion');
-
-    if (data.psychologist) {
-        psychologistCard.classList.remove('hidden');
-        psychologistOpinion.innerText = data.psychologist;
-        
-        if (data.isPsychologistError) {
-            psychologistOpinion.classList.add('text-slate-500', 'italic');
-        } else {
-            psychologistOpinion.classList.remove('text-slate-500', 'italic');
-        }
-    } else {
-        psychologistCard.classList.add('hidden');
-    }
-}

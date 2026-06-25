@@ -7,6 +7,7 @@ export function saveToHistory(text, result) {
         id: Date.now(),
         timestamp: new Date().toLocaleString('vi-VN'),
         text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+        originalText: text,
         riskLevel: result.riskLevel,
         riskScore: result.riskScore,
         fullResult: result

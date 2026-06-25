@@ -3,15 +3,43 @@ import { analyzeMessage } from './gemini.js';
 import { saveToHistory, getHistory, clearAllHistory } from './storage.js';
 import { initQuiz, initLibrary, initLinkScanner, initCanvasShare } from './features.js';
 
+const MAX_MESSAGE_LENGTH = 5000;
+
+function validateMessage(text) {
+    if (!text.trim()) {
+        return 'Bác vui lòng dán nội dung tin nhắn trước khi bấm Kiểm tra nhé.';
+    }
+    if (text.length > MAX_MESSAGE_LENGTH) {
+        return `Tin nhắn quá dài (${text.length} ký tự). Bác hãy rút gọn dưới ${MAX_MESSAGE_LENGTH} ký tự rồi thử lại.`;
+    }
+    return null;
+}
+
+function getFriendlyErrorMessage(error) {
+    const message = (error?.message || '').toLowerCase();
+
+    if (!navigator.onLine || message.includes('failed to fetch') || message.includes('network')) {
+        return 'Mất kết nối mạng. Bác kiểm tra Wi‑Fi/4G rồi thử lại nhé.';
+    }
+    if (message.includes('safety') || message.includes('blocked') || message.includes('refus')) {
+        return 'AI không thể phân tích nội dung này. Bác hãy thử tin khác hoặc hỏi người thân.';
+    }
+    if (message.includes('json') || message.includes('invalid')) {
+        return 'Kết quả phân tích chưa đầy đủ. Bác thử lại sau vài giây nhé.';
+    }
+    if (message.includes('quota') || message.includes('429')) {
+        return 'Hệ thống đang quá tải. Bác chờ 1 phút rồi thử lại nhé.';
+    }
+    return 'Có lỗi khi phân tích. Bác thử lại sau hoặc hỏi người thân trước khi làm theo tin nhắn.';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize Features
     initQuiz();
     initLibrary();
     initLinkScanner(UI);
-    
+
     let lastResult = null;
 
-    // TTS Toggle
     UI.ttsToggle.addEventListener('click', () => {
         UI.ttsEnabled = !UI.ttsEnabled;
         UI.ttsToggle.innerText = UI.ttsEnabled ? '🔊' : '🔇';
@@ -20,7 +48,6 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.ttsToggle.classList.toggle('text-white');
     });
 
-    // Initial history render
     UI.renderHistory(getHistory(), (result) => {
         UI.renderResult(result);
         lastResult = result;
@@ -29,23 +56,23 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.resultArea.scrollIntoView({ behavior: 'smooth' });
     });
 
-    // Check button click
     UI.checkBtn.addEventListener('click', async () => {
-        const text = UI.messageInput.value.trim();
-        if (!text) {
-            alert('Vui lòng nhập nội dung tin nhắn!');
+        const text = UI.messageInput.value;
+        const validationError = validateMessage(text);
+        if (validationError) {
+            alert(validationError);
             return;
         }
 
         UI.showLoading();
 
         try {
-            const result = await analyzeMessage(text);
+            const result = await analyzeMessage(text.trim());
             UI.hideLoading();
             UI.renderResult(result);
             lastResult = result;
-            
-            const newHistory = saveToHistory(text, result);
+
+            const newHistory = saveToHistory(text.trim(), result);
             UI.renderHistory(newHistory, (res) => {
                 UI.renderResult(res);
                 lastResult = res;
@@ -55,12 +82,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } catch (error) {
             UI.hideLoading();
-            alert('Có lỗi xảy ra khi phân tích: ' + error.message);
+            alert(getFriendlyErrorMessage(error));
             console.error(error);
         }
     });
 
-    // Sample cards click
     document.querySelectorAll('.sample-card').forEach(card => {
         card.addEventListener('click', () => {
             UI.messageInput.value = card.dataset.text;
@@ -69,17 +95,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Paste button
     UI.pasteBtn.addEventListener('click', async () => {
         try {
             const text = await navigator.clipboard.readText();
             UI.messageInput.value = text;
         } catch (err) {
             console.error('Failed to read clipboard:', err);
+            alert('Không đọc được clipboard. Bác thử dán thủ công (giữ và chọn Dán).');
         }
     });
 
-    // Voice button (Mock)
     UI.voiceBtn.addEventListener('click', () => {
         if (!('webkitSpeechRecognition' in window)) {
             alert('Trình duyệt của bạn không hỗ trợ nhận diện giọng nói.');
@@ -88,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const recognition = new webkitSpeechRecognition();
         recognition.lang = 'vi-VN';
         recognition.start();
-        UI.voiceBtn.innerText = 'Listening...';
+        UI.voiceBtn.innerText = 'Đang nghe...';
         recognition.onresult = (event) => {
             UI.messageInput.value = event.results[0][0].transcript;
             UI.voiceBtn.innerText = '🎤 Giọng nói';
@@ -98,21 +123,18 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     });
 
-    // Emergency buttons
     document.querySelectorAll('.emergency-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             UI.renderEmergencyTimeline(btn.dataset.type);
         });
     });
 
-    // Clear history
     UI.clearAllHistory.addEventListener('click', () => {
         if (confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử?')) {
             UI.renderHistory(clearAllHistory(), () => {});
         }
     });
 
-    // Share button
     UI.shareBtn.addEventListener('click', () => {
         if (lastResult) {
             initCanvasShare(lastResult);
