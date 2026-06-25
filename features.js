@@ -7,7 +7,7 @@ const CATEGORY_STYLES = {
     delivery: { badge: 'bg-teal-100 text-teal-600', label: 'Giả giao hàng' }
 };
 
-const SITE_URL = 'https://scamcheck-mu.vercel.app/';
+const SITE_URL = 'https://cybershield135.github.io/scamcheck2/';
 
 let libraryData = [];
 

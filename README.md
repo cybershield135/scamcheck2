@@ -4,7 +4,7 @@
 
 > ScamCheck là công cụ giáo dục do nhóm học viên phát triển và đánh giá của ứng dụng không thay thế cảnh báo chính thức từ ngân hàng hoặc cơ quan chức năng.
 
-**Live:** https://scamcheck-mu.vercel.app/
+**Live:** https://cybershield135.github.io/scamcheck2/
 
 ## Tính năng theo cấp
 
