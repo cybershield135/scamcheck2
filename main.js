@@ -3,8 +3,13 @@ import { analyzeMessage } from './gemini.js';
 import { saveToHistory, getHistory, clearAllHistory } from './storage.js';
 import { initQuiz, initLibrary, initLinkScanner, initCanvasShare } from './features.js';
 import { callRescuer, NOTHING_PRAISE } from './rescuer.js';
+import { initRouter, onRoute } from './router.js';
 
 const MAX_MESSAGE_LENGTH = 5000;
+
+function clampMessageLength(text) {
+    return text.slice(0, MAX_MESSAGE_LENGTH);
+}
 
 function validateMessage(text) {
     if (!text.trim()) {
@@ -82,16 +87,32 @@ document.addEventListener('DOMContentLoaded', () => {
     initLibrary();
     initLinkScanner(UI);
     initCrisisFlow();
+    initRouter();
+
+    onRoute('/history', () => {
+        UI.renderHistory(getHistory());
+    });
 
     let lastResult = null;
 
     UI.updateCharCount(UI.messageInput.value.length, MAX_MESSAGE_LENGTH);
     UI.messageInput.addEventListener('input', () => {
         UI.updateCharCount(UI.messageInput.value.length, MAX_MESSAGE_LENGTH);
-        if (UI.messageInput.value.trim() && UI.messageInput.value.length <= MAX_MESSAGE_LENGTH) {
+        if (UI.messageInput.value.trim()) {
             UI.clearInputError();
         }
     });
+
+    if (UI.checkAnotherBtn) {
+        UI.checkAnotherBtn.addEventListener('click', () => {
+            UI.messageInput.value = '';
+            UI.updateCharCount(0, MAX_MESSAGE_LENGTH);
+            UI.resultArea.classList.add('hidden');
+            UI.shareCardPreview?.classList.add('hidden');
+            UI.clearShareNotice();
+            document.getElementById('checker').scrollIntoView({ behavior: 'smooth' });
+        });
+    }
 
     UI.ttsToggle.addEventListener('click', () => {
         UI.ttsEnabled = !UI.ttsEnabled;
@@ -101,13 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.ttsToggle.classList.toggle('text-white');
     });
 
-    UI.renderHistory(getHistory(), (result) => {
-        UI.renderResult(result);
-        lastResult = result;
-        UI.resultArea.classList.remove('hidden');
-        UI.resultDashboard.classList.remove('hidden');
-        UI.resultArea.scrollIntoView({ behavior: 'smooth' });
-    });
+    UI.renderHistory(getHistory());
 
     UI.checkBtn.addEventListener('click', async () => {
         const text = UI.messageInput.value;
@@ -127,13 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
             UI.clearShareNotice();
 
             const newHistory = saveToHistory(text.trim(), result);
-            UI.renderHistory(newHistory, (res) => {
-                UI.renderResult(res);
-                lastResult = res;
-                UI.resultArea.classList.remove('hidden');
-                UI.resultDashboard.classList.remove('hidden');
-                UI.resultArea.scrollIntoView({ behavior: 'smooth' });
-            });
+            UI.renderHistory(newHistory);
         } catch (error) {
             UI.hideLoading();
             UI.resultArea.classList.add('hidden');
@@ -154,15 +163,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     UI.pasteBtn.addEventListener('click', async () => {
         try {
-            const text = await navigator.clipboard.readText();
+            const text = clampMessageLength(await navigator.clipboard.readText());
             UI.messageInput.value = text;
             UI.updateCharCount(text.length, MAX_MESSAGE_LENGTH);
-            if (text.trim() && text.length <= MAX_MESSAGE_LENGTH) {
+            if (text.trim()) {
                 UI.clearInputError();
-            } else if (!text.trim()) {
-                UI.showInputError('Bác vui lòng dán nội dung tin nhắn trước khi bấm Kiểm tra nhé.');
             } else {
-                UI.showInputError(`Tin nhắn quá dài (${text.length} ký tự). Bác hãy rút gọn dưới ${MAX_MESSAGE_LENGTH} ký tự rồi thử lại.`);
+                UI.showInputError('Bác vui lòng dán nội dung tin nhắn trước khi bấm Kiểm tra nhé.');
             }
         } catch (err) {
             console.error('Failed to read clipboard:', err);
@@ -180,7 +187,9 @@ document.addEventListener('DOMContentLoaded', () => {
         recognition.start();
         UI.voiceBtn.innerText = 'Đang nghe...';
         recognition.onresult = (event) => {
-            UI.messageInput.value = event.results[0][0].transcript;
+            const text = clampMessageLength(event.results[0][0].transcript);
+            UI.messageInput.value = text;
+            UI.updateCharCount(text.length, MAX_MESSAGE_LENGTH);
             UI.voiceBtn.innerText = '🎤 Giọng nói';
         };
         recognition.onerror = () => {
@@ -190,20 +199,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     UI.clearAllHistory.addEventListener('click', () => {
         if (confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử?')) {
-            UI.renderHistory(clearAllHistory(), () => {});
+            UI.renderHistory(clearAllHistory());
         }
     });
 
-    UI.shareBtn.addEventListener('click', () => {
+    UI.shareBtn.addEventListener('click', async () => {
         if (lastResult) {
             UI.clearShareNotice();
-            initCanvasShare(
+            await initCanvasShare(
                 lastResult,
-                () => UI.showShareNotice('✅ Đã lưu thẻ cảnh báo vào máy. Bác mở thư viện ảnh để xem nhé.', 'success'),
+                () => UI.showShareNotice('✅ Đã tạo thẻ cảnh báo. Bác có thể tải ảnh hoặc chia sẻ cho người thân.', 'success'),
                 () => UI.showShareNotice('Không tải được ảnh. Bác thử lại trên Safari hoặc Chrome nhé.')
             );
         } else {
-            UI.showShareNotice('Bác cần kiểm tra một tin nhắn trước, rồi bấm lưu thẻ cảnh báo.');
+            UI.showShareNotice('Bác cần kiểm tra một tin nhắn trước, rồi bấm tạo thẻ cảnh báo.');
         }
     });
 });

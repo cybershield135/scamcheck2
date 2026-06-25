@@ -29,23 +29,27 @@ function normalizeSignsFromApi(raw) {
 
     const signs = [];
     const excerpts = [];
+    const signDetails = [];
 
     for (const item of raw.signs) {
         if (typeof item === "string") {
             signs.push(item);
+            signDetails.push({ phrase: "", reason: item });
             continue;
         }
         if (item && typeof item === "object") {
-            const description = item.description || item.sign || "";
-            const excerpt = item.excerpt || item.quote || "";
+            const description = item.description || item.sign || item.reason || "";
+            const excerpt = item.excerpt || item.quote || item.phrase || "";
             if (description) signs.push(description);
             if (excerpt) excerpts.push(excerpt);
+            signDetails.push({ phrase: excerpt, reason: description });
         }
     }
 
     return {
         ...raw,
         signs,
+        signDetails,
         excerpts: excerpts.length ? excerpts : raw.excerpts
     };
 }
@@ -54,6 +58,9 @@ export async function handleFullAnalysis(text) {
     const rawDetective = await callBackend({ type: "detective", text });
     const normalizedRaw = normalizeSignsFromApi(rawDetective);
     const detectiveResult = parseDetectiveResult(normalizedRaw, text);
+    if (normalizedRaw.signDetails?.length) {
+        detectiveResult.signDetails = normalizedRaw.signDetails;
+    }
 
     let psychologistOpinion = null;
     let isPsychologistError = false;

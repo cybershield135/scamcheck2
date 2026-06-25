@@ -80,18 +80,29 @@ function normalizeExcerpts(raw) {
     return [];
 }
 
-function normalizeSignDescriptions(raw) {
-    if (!Array.isArray(raw?.signs)) return asArray(raw?.signs);
+function normalizeSignDetails(raw) {
+    if (!Array.isArray(raw?.signs)) {
+        return asArray(raw?.signs).map((reason) => ({ phrase: "", reason }));
+    }
 
     return raw.signs
         .map((item) => {
-            if (typeof item === "string") return item;
-            if (item && typeof item === "object") {
-                return asString(item.description || item.sign);
+            if (typeof item === "string") {
+                return { phrase: "", reason: item };
             }
-            return "";
+            if (item && typeof item === "object") {
+                return {
+                    phrase: asString(item.excerpt || item.phrase || item.quote || ""),
+                    reason: asString(item.description || item.sign || item.reason || "")
+                };
+            }
+            return null;
         })
-        .filter(Boolean);
+        .filter((item) => item && (item.phrase || item.reason));
+}
+
+function normalizeSignDescriptions(raw) {
+    return normalizeSignDetails(raw).map((item) => item.reason || item.phrase).filter(Boolean);
 }
 
 export function parseDetectiveResult(raw, originalText = "") {
@@ -105,14 +116,17 @@ export function parseDetectiveResult(raw, originalText = "") {
 
     const actions = normalizeActions(raw);
     const excerpts = normalizeExcerpts(raw);
+    const signDetails = normalizeSignDetails(raw);
+    const signDescriptions = normalizeSignDescriptions(raw);
 
     return {
         riskScore,
         riskLevel: normalizeRiskLevel(raw.riskLevel, riskScore),
         riskTitle: asString(raw.riskTitle, DEFAULT_RESULT.riskTitle),
         riskDescription: asString(raw.riskDescription, DEFAULT_RESULT.riskDescription),
-        signs: normalizeSignDescriptions(raw).length ? normalizeSignDescriptions(raw) : DEFAULT_RESULT.signs,
-        excerpts,
+        signs: signDescriptions.length ? signDescriptions : DEFAULT_RESULT.signs,
+        signDetails: signDetails.length ? signDetails : [],
+        excerpts: excerpts.length ? excerpts : signDetails.map((s) => s.phrase).filter(Boolean),
         actions: actions.length === 3 ? actions : DEFAULT_RESULT.actions,
         detectiveOpinion: asString(raw.detectiveOpinion, DEFAULT_RESULT.detectiveOpinion),
         originalText,

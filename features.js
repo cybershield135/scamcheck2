@@ -49,7 +49,9 @@ export async function initLibrary() {
         modal.classList.remove('hidden');
         document.getElementById('tryInChecker').onclick = () => {
             document.getElementById('messageInput').value = item.example;
+            document.getElementById('messageInput').dispatchEvent(new Event('input'));
             modal.classList.add('hidden');
+            window.location.hash = '#/';
             document.getElementById('checker').scrollIntoView({ behavior: 'smooth' });
         };
     }
@@ -242,94 +244,118 @@ export async function initLinkScanner(UI) {
     };
 }
 
-function drawQrPlaceholder(ctx, x, y, size, url) {
-    ctx.fillStyle = '#F1F5F9';
-    ctx.fillRect(x, y, size, size);
-    ctx.strokeStyle = '#2563EB';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, size, size);
-
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-        ctx.drawImage(img, x, y, size, size);
-    };
-    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}`;
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+    const words = String(text || '').split(' ');
+    let line = '';
+    let currentY = y;
+    for (const word of words) {
+        const test = line + word + ' ';
+        if (ctx.measureText(test).width > maxWidth && line) {
+            ctx.fillText(line.trim(), x, currentY);
+            line = word + ' ';
+            currentY += lineHeight;
+        } else {
+            line = test;
+        }
+    }
+    if (line) ctx.fillText(line.trim(), x, currentY);
+    return currentY;
 }
 
-export function initCanvasShare(result, onDone, onFail) {
-    const canvas = document.getElementById('shareCanvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 800;
-    canvas.height = 640;
+export async function initCanvasShare(result, onDone, onFail) {
+    const preview = document.getElementById('shareCardPreview');
+    if (preview) {
+        preview.classList.remove('hidden');
+        preview.innerHTML = '<p class="text-muted font-semibold">Đang tạo thẻ...</p>';
+    }
 
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, 800, 640);
-
-    const grad = ctx.createLinearGradient(0, 0, 800, 0);
-    grad.addColorStop(0, '#2563EB');
-    grad.addColorStop(1, '#0EA5E9');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 800, 110);
-
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 36px Inter, sans-serif';
-    ctx.fillText('ScamCheck — CẢNH BÁO', 40, 68);
-
-    const color = result.riskScore > 70 ? '#EF4444' : result.riskScore > 30 ? '#F59E0B' : '#22C55E';
-    ctx.fillStyle = color;
-    ctx.fillRect(40, 140, 180, 44);
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 22px Inter, sans-serif';
-    ctx.fillText(result.riskLevel, 55, 170);
-
-    ctx.fillStyle = color;
-    ctx.font = 'bold 72px Inter, sans-serif';
-    ctx.fillText(`${result.riskScore}%`, 520, 210);
-
-    ctx.fillStyle = '#0F172A';
-    ctx.font = 'bold 28px Inter, sans-serif';
-    ctx.fillText(result.riskTitle?.substring(0, 40) || 'Cảnh báo lừa đảo', 40, 240);
-
-    ctx.fillStyle = '#64748B';
-    ctx.font = '18px Inter, sans-serif';
-    const desc = (result.riskDescription || '').substring(0, 90);
-    ctx.fillText(desc, 40, 280);
-
-    ctx.fillStyle = '#0F172A';
-    ctx.font = 'bold 20px Inter, sans-serif';
-    ctx.fillText('Dấu hiệu chính:', 40, 330);
-
-    ctx.font = '18px Inter, sans-serif';
-    const signs = (result.signs || []).slice(0, 2);
-    signs.forEach((sign, i) => {
-        ctx.fillStyle = '#475569';
-        ctx.fillText(`• ${sign.substring(0, 55)}`, 40, 365 + i * 30);
-    });
-
-    drawQrPlaceholder(ctx, 620, 420, 120, SITE_URL);
-
-    ctx.fillStyle = '#64748B';
-    ctx.font = '14px Inter, sans-serif';
-    ctx.fillText('Quét mã để mở ScamCheck', 590, 560);
-
-    ctx.fillStyle = '#2563EB';
-    ctx.font = 'bold 16px Inter, sans-serif';
-    ctx.fillText(SITE_URL, 40, 610);
-
-    ctx.fillStyle = '#94A3B8';
-    ctx.font = '13px Inter, sans-serif';
-    ctx.fillText('Công cụ giáo dục — không thay thế cảnh báo chính thức', 40, 632);
-
-    setTimeout(() => {
-        try {
-            const link = document.createElement('a');
-            link.download = `scamcheck-${Date.now()}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            if (onDone) onDone();
-        } catch (err) {
-            if (onFail) onFail(err);
+    try {
+        if (typeof QRCode === 'undefined') {
+            throw new Error('QR library not loaded');
         }
-    }, 600);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 800;
+        const ctx = canvas.getContext('2d');
+
+        const colors = {
+            'An toàn': '#22C55E',
+            'Nghi ngờ': '#F59E0B',
+            'Nguy hiểm': '#EF4444'
+        };
+        const bg = colors[result.riskLevel] || '#F59E0B';
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, 600, 800);
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, 600, 120);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 36px Inter, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(result.riskLevel.toUpperCase(), 300, 55);
+        ctx.font = '20px Inter, Arial, sans-serif';
+        ctx.fillText('ScamCheck', 300, 95);
+
+        ctx.fillStyle = '#0F172A';
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 48px Inter, Arial, sans-serif';
+        ctx.fillText(`${result.riskScore}%`, 30, 175);
+
+        ctx.font = 'bold 22px Inter, Arial, sans-serif';
+        wrapCanvasText(ctx, result.riskTitle || 'Cảnh báo lừa đảo', 30, 210, 540, 28);
+
+        ctx.font = '18px Inter, Arial, sans-serif';
+        ctx.fillStyle = '#64748B';
+        wrapCanvasText(ctx, result.riskDescription || '', 30, 260, 540, 24);
+
+        ctx.fillStyle = '#0F172A';
+        ctx.font = 'bold 20px Inter, Arial, sans-serif';
+        ctx.fillText('Dấu hiệu chính:', 30, 340);
+
+        ctx.font = '18px Inter, Arial, sans-serif';
+        let y = 375;
+        const signItems = (result.signDetails || []).slice(0, 3);
+        const fallbackSigns = (result.signs || []).slice(0, 3);
+
+        if (signItems.length) {
+            signItems.forEach((sign) => {
+                y = wrapCanvasText(ctx, `• ${sign.phrase || sign.reason}`, 30, y, 540, 24) + 30;
+            });
+        } else {
+            fallbackSigns.forEach((sign) => {
+                y = wrapCanvasText(ctx, `• ${sign}`, 30, y, 540, 24) + 30;
+            });
+        }
+
+        const qrCanvas = document.createElement('canvas');
+        await QRCode.toCanvas(qrCanvas, SITE_URL, { width: 140, margin: 1 });
+        ctx.drawImage(qrCanvas, 230, 620, 140, 140);
+
+        ctx.font = '16px Inter, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#64748B';
+        ctx.fillText('Quét mã để dùng ScamCheck', 300, 780);
+
+        const dataUrl = canvas.toDataURL('image/png');
+
+        if (preview) {
+            preview.innerHTML = `
+                <img src="${dataUrl}" alt="Thẻ cảnh báo ScamCheck" class="rounded-2xl border-2 border-slate-200 shadow-lg mx-auto mb-4 max-w-full">
+                <a href="${dataUrl}" download="scamcheck-canh-bao.png" class="inline-block bg-primary text-white px-6 py-3 rounded-2xl font-bold btn-hover">Tải ảnh về máy</a>
+            `;
+        }
+
+        const link = document.createElement('a');
+        link.download = `scamcheck-${Date.now()}.png`;
+        link.href = dataUrl;
+        link.click();
+
+        if (onDone) onDone();
+    } catch (err) {
+        if (preview) {
+            preview.innerHTML = '<p class="text-danger font-semibold">Không tạo được thẻ. Bác thử lại sau nhé.</p>';
+        }
+        if (onFail) onFail(err);
+    }
 }
