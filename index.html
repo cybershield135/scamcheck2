@@ -143,14 +143,18 @@
                     <p class="text-muted text-lg">Dán nội dung tin nhắn bạn nghi ngờ vào ô dưới đây</p>
                 </div>
 
-                <div class="bg-slate-50 p-6 rounded-3xl border-2 border-slate-100 shadow-inner focus-within:border-primary/30 transition-colors">
-                    <textarea id="messageInput" rows="6" class="w-full bg-transparent text-xl p-4 focus:outline-none resize-none" placeholder="Dán nội dung tin nhắn nghi ngờ vào đây..."></textarea>
+                <div id="inputBox" class="bg-slate-50 p-6 rounded-3xl border-2 border-slate-100 shadow-inner focus-within:border-primary/30 transition-colors">
+                    <textarea id="messageInput" rows="6" class="w-full bg-transparent text-xl p-4 focus:outline-none resize-none" placeholder="Dán nội dung tin nhắn nghi ngờ vào đây..." aria-describedby="inputError charCount"></textarea>
+                    <div id="inputError" class="hidden mt-2 p-4 rounded-2xl bg-red-50 border-2 border-red-200 text-red-800 text-lg font-medium leading-relaxed" role="alert"></div>
                     <div class="flex flex-wrap justify-between items-center mt-4 gap-4">
                         <div class="flex gap-2">
                             <button id="voiceBtn" class="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 font-semibold text-muted btn-hover">🎤 Giọng nói</button>
                             <button id="pasteBtn" class="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 font-semibold text-muted btn-hover">📋 Dán nhanh</button>
                         </div>
-                        <button id="checkBtn" class="bg-primary text-white px-10 py-4 rounded-2xl font-bold text-xl btn-hover shadow-lg shadow-blue-200">⚡ Kiểm tra ngay</button>
+                        <div class="flex flex-col items-end gap-1">
+                            <span id="charCount" class="text-sm text-muted font-semibold">0 / 5000 ký tự</span>
+                            <button id="checkBtn" class="bg-primary text-white px-10 py-4 rounded-2xl font-bold text-xl btn-hover shadow-lg shadow-blue-200">⚡ Kiểm tra ngay</button>
+                        </div>
                     </div>
                 </div>
 
@@ -283,13 +287,16 @@
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="mt-12 flex flex-wrap justify-center gap-4">
+                <div class="mt-12 flex flex-col items-center gap-4">
+                    <div id="shareNotice" class="hidden w-full max-w-xl p-4 rounded-2xl bg-amber-50 border-2 border-amber-200 text-amber-900 text-lg font-medium text-center" role="status"></div>
+                    <div class="flex flex-wrap justify-center gap-4">
                     <button id="shareBtn" class="bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold text-lg btn-hover flex items-center gap-2">
                         🖼️ Lưu thẻ cảnh báo
                     </button>
                     <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="bg-white border-2 border-slate-200 px-8 py-4 rounded-2xl font-bold text-lg btn-hover">
                         🔄 Kiểm tra tin khác
                     </button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -299,9 +306,12 @@
             <div class="container mx-auto px-4 max-w-4xl text-center">
                 <h2 class="text-4xl font-extrabold mb-4">Soi Link độc hại</h2>
                 <p class="text-muted text-lg mb-12">Dán link hoặc dán tin nhắn — hệ thống phát hiện tên miền giả mạo (ví dụ: vietcornbank thay vietcombank)</p>
-                <div class="flex gap-4">
-                    <input id="linkInput" type="text" placeholder="Dán link tại đây (ví dụ: http://vcb-web.com)..." class="flex-grow bg-white border-2 border-slate-200 px-6 py-4 rounded-2xl focus:outline-none focus:border-primary text-lg">
-                    <button id="scanLinkBtn" class="bg-secondary text-white px-8 py-4 rounded-2xl font-bold text-lg btn-hover">Soi ngay</button>
+                <div class="flex flex-col gap-4 text-left">
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <input id="linkInput" type="text" placeholder="Dán link tại đây (ví dụ: http://vcb-web.com)..." class="flex-grow bg-white border-2 border-slate-200 px-6 py-4 rounded-2xl focus:outline-none focus:border-primary text-lg">
+                        <button id="scanLinkBtn" class="bg-secondary text-white px-8 py-4 rounded-2xl font-bold text-lg btn-hover whitespace-nowrap">Soi ngay</button>
+                    </div>
+                    <div id="linkScanError" class="hidden p-4 rounded-2xl bg-red-50 border-2 border-red-200 text-red-800 text-lg font-medium" role="alert"></div>
                 </div>
                 <div id="linkScanResult" class="mt-8 hidden fade-in">
                     <!-- Result will be injected -->
@@ -377,7 +387,10 @@
                         <button class="quiz-choice-btn bg-danger/20 hover:bg-danger/60 border-2 border-danger/50 p-6 rounded-3xl text-xl font-bold transition-all transform hover:-translate-y-1" data-choice="scam">🚨 Lừa đảo</button>
                         <button class="quiz-choice-btn bg-success/20 hover:bg-success/60 border-2 border-success/50 p-6 rounded-3xl text-xl font-bold transition-all transform hover:-translate-y-1" data-choice="safe">✅ An toàn</button>
                     </div>
-                    <div id="quizFeedback" class="hidden mt-6 p-4 rounded-2xl text-lg"></div>
+                    <div id="quizFeedback" class="hidden mt-6 p-6 rounded-2xl text-lg leading-relaxed border-2"></div>
+                    <div id="quizNextWrap" class="hidden mt-4 text-center">
+                        <button id="quizNextBtn" class="bg-primary text-white px-10 py-4 rounded-2xl font-bold text-lg btn-hover">Câu tiếp theo →</button>
+                    </div>
                 </div>
                 <div id="quizSummary" class="hidden bg-white/10 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/20 shadow-2xl"></div>
             </div>

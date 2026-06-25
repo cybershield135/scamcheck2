@@ -82,6 +82,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let lastResult = null;
 
+    UI.updateCharCount(UI.messageInput.value.length, MAX_MESSAGE_LENGTH);
+    UI.messageInput.addEventListener('input', () => {
+        UI.updateCharCount(UI.messageInput.value.length, MAX_MESSAGE_LENGTH);
+        if (UI.messageInput.value.trim() && UI.messageInput.value.length <= MAX_MESSAGE_LENGTH) {
+            UI.clearInputError();
+        }
+    });
+
     UI.ttsToggle.addEventListener('click', () => {
         UI.ttsEnabled = !UI.ttsEnabled;
         UI.ttsToggle.innerText = UI.ttsEnabled ? '🔊' : '🔇';
@@ -102,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const text = UI.messageInput.value;
         const validationError = validateMessage(text);
         if (validationError) {
-            alert(validationError);
+            UI.showInputError(validationError);
             return;
         }
 
@@ -113,6 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
             UI.hideLoading();
             UI.renderResult(result);
             lastResult = result;
+            UI.clearShareNotice();
 
             const newHistory = saveToHistory(text.trim(), result);
             UI.renderHistory(newHistory, (res) => {
@@ -124,7 +133,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } catch (error) {
             UI.hideLoading();
-            alert(getFriendlyErrorMessage(error));
+            UI.resultArea.classList.add('hidden');
+            UI.showInputError(getFriendlyErrorMessage(error));
             console.error(error);
         }
     });
@@ -132,6 +142,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.sample-card').forEach(card => {
         card.addEventListener('click', () => {
             UI.messageInput.value = card.dataset.text;
+            UI.updateCharCount(UI.messageInput.value.length, MAX_MESSAGE_LENGTH);
+            UI.clearInputError();
             UI.messageInput.focus();
             UI.checkBtn.scrollIntoView({ behavior: 'smooth' });
         });
@@ -141,15 +153,23 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const text = await navigator.clipboard.readText();
             UI.messageInput.value = text;
+            UI.updateCharCount(text.length, MAX_MESSAGE_LENGTH);
+            if (text.trim() && text.length <= MAX_MESSAGE_LENGTH) {
+                UI.clearInputError();
+            } else if (!text.trim()) {
+                UI.showInputError('Bác vui lòng dán nội dung tin nhắn trước khi bấm Kiểm tra nhé.');
+            } else {
+                UI.showInputError(`Tin nhắn quá dài (${text.length} ký tự). Bác hãy rút gọn dưới ${MAX_MESSAGE_LENGTH} ký tự rồi thử lại.`);
+            }
         } catch (err) {
             console.error('Failed to read clipboard:', err);
-            alert('Không đọc được clipboard. Bác thử dán thủ công (giữ và chọn Dán).');
+            UI.showInputError('Không đọc được clipboard. Bác thử dán thủ công (giữ và chọn Dán).');
         }
     });
 
     UI.voiceBtn.addEventListener('click', () => {
         if (!('webkitSpeechRecognition' in window)) {
-            alert('Trình duyệt của bạn không hỗ trợ nhận diện giọng nói.');
+            UI.showInputError('Trình duyệt của bạn chưa hỗ trợ giọng nói. Bác có thể dán tin nhắn thủ công vào ô trên.');
             return;
         }
         const recognition = new webkitSpeechRecognition();
@@ -173,9 +193,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     UI.shareBtn.addEventListener('click', () => {
         if (lastResult) {
-            initCanvasShare(lastResult);
+            UI.clearShareNotice();
+            initCanvasShare(
+                lastResult,
+                () => UI.showShareNotice('✅ Đã lưu thẻ cảnh báo vào máy. Bác mở thư viện ảnh để xem nhé.', 'success'),
+                () => UI.showShareNotice('Không tải được ảnh. Bác thử lại trên Safari hoặc Chrome nhé.')
+            );
         } else {
-            alert('Vui lòng thực hiện kiểm tra trước khi lưu thẻ!');
+            UI.showShareNotice('Bác cần kiểm tra một tin nhắn trước, rồi bấm lưu thẻ cảnh báo.');
         }
     });
 });

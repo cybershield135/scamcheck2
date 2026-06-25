@@ -109,6 +109,8 @@ export async function initQuiz() {
     const progressEl = document.getElementById('quizProgress');
     const scoreEl = document.getElementById('quizScore');
     const feedbackEl = document.getElementById('quizFeedback');
+    const nextWrap = document.getElementById('quizNextWrap');
+    const nextBtn = document.getElementById('quizNextBtn');
     const summaryEl = document.getElementById('quizSummary');
     const buttons = document.querySelectorAll('.quiz-choice-btn');
     const quizContainer = document.getElementById('quizContainer');
@@ -127,7 +129,7 @@ export async function initQuiz() {
                 <div class="text-6xl mb-4">${percent >= 80 ? '🏆' : percent >= 50 ? '👍' : '📚'}</div>
                 <h3 class="text-3xl font-extrabold mb-2">Kết quả: ${score}/${total * 10} điểm</h3>
                 <p class="text-slate-300 text-lg mb-6">${comment}</p>
-                <button id="quizRestart" class="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg btn-hover">Luyện lại</button>
+                <button id="quizRestart" class="bg-primary text-white px-8 py-4 rounded-2xl font-bold text-lg btn-hover">Luyện lại từ đầu</button>
             </div>
         `;
         document.getElementById('quizRestart').onclick = () => {
@@ -140,12 +142,27 @@ export async function initQuiz() {
         };
     }
 
+    function goNext() {
+        currentQuestion++;
+        if (currentQuestion >= questions.length) {
+            showSummary();
+        } else {
+            loadQuestion();
+        }
+    }
+
+    nextBtn.onclick = () => {
+        if (!answered) return;
+        goNext();
+    };
+
     function loadQuestion() {
         answered = false;
         feedbackEl.classList.add('hidden');
+        nextWrap.classList.add('hidden');
         buttons.forEach((b) => {
             b.disabled = false;
-            b.classList.remove('opacity-50');
+            b.classList.remove('opacity-50', 'ring-4', 'ring-white');
         });
 
         const q = questions[currentQuestion];
@@ -158,10 +175,13 @@ export async function initQuiz() {
         btn.onclick = () => {
             if (answered) return;
             answered = true;
+
             buttons.forEach((b) => {
                 b.disabled = true;
                 b.classList.add('opacity-50');
             });
+            btn.classList.remove('opacity-50');
+            btn.classList.add('ring-4', 'ring-white');
 
             const choice = btn.dataset.choice;
             const q = questions[currentQuestion];
@@ -170,19 +190,23 @@ export async function initQuiz() {
             if (correct) score += 10;
 
             feedbackEl.classList.remove('hidden');
-            feedbackEl.className = `mt-6 p-4 rounded-2xl text-lg font-medium ${correct ? 'bg-success/20 text-green-100 border border-success/40' : 'bg-danger/20 text-red-100 border border-danger/40'}`;
-            feedbackEl.textContent = (correct ? '✅ Chính xác! ' : '❌ Chưa đúng. ') + q.explanation;
+            if (correct) {
+                feedbackEl.className = 'mt-6 p-6 rounded-2xl text-lg leading-relaxed border-2 bg-green-500/20 text-green-100 border-green-400/50';
+                feedbackEl.innerHTML = `<strong class="block text-xl mb-2">✅ Chính xác!</strong>${q.explanation}`;
+            } else {
+                feedbackEl.className = 'mt-6 p-6 rounded-2xl text-lg leading-relaxed border-2 bg-red-500/20 text-red-100 border-red-400/50';
+                feedbackEl.innerHTML = `<strong class="block text-xl mb-2">❌ Chưa đúng</strong>${q.explanation}`;
+            }
 
             scoreEl.textContent = `Điểm: ${score}`;
 
-            setTimeout(() => {
-                currentQuestion++;
-                if (currentQuestion >= questions.length) {
-                    showSummary();
-                } else {
-                    loadQuestion();
-                }
-            }, 2500);
+            if (currentQuestion >= questions.length - 1) {
+                nextBtn.textContent = 'Xem kết quả →';
+            } else {
+                nextBtn.textContent = 'Câu tiếp theo →';
+            }
+            nextWrap.classList.remove('hidden');
+            feedbackEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         };
     });
 
@@ -190,10 +214,18 @@ export async function initQuiz() {
 }
 
 export async function initLinkScanner(UI) {
+    UI.linkInput.addEventListener('input', () => {
+        if (UI.linkInput.value.trim()) UI.clearLinkError();
+    });
+
     UI.scanLinkBtn.onclick = async () => {
         const url = UI.linkInput.value.trim();
-        if (!url) return alert('Vui lòng nhập đường dẫn!');
+        if (!url) {
+            UI.showLinkError('Bác vui lòng dán đường link vào ô trên trước khi bấm Soi ngay.');
+            return;
+        }
 
+        UI.clearLinkError();
         UI.scanLinkBtn.innerText = '⏳ Đang soi...';
         UI.scanLinkBtn.disabled = true;
 
@@ -201,7 +233,8 @@ export async function initLinkScanner(UI) {
             const result = await scanLink(url);
             UI.renderLinkScan(result);
         } catch (error) {
-            alert('Lỗi khi soi link: ' + error.message);
+            UI.showLinkError('Không soi được link này. Bác thử lại hoặc không bấm vào link lạ nhé.');
+            console.error(error);
         } finally {
             UI.scanLinkBtn.innerText = 'Soi ngay';
             UI.scanLinkBtn.disabled = false;
@@ -215,9 +248,6 @@ function drawQrPlaceholder(ctx, x, y, size, url) {
     ctx.strokeStyle = '#2563EB';
     ctx.lineWidth = 2;
     ctx.strokeRect(x, y, size, size);
-    ctx.fillStyle = '#2563EB';
-    ctx.font = 'bold 12px Inter, sans-serif';
-    ctx.fillText('QR', x + size / 2 - 12, y + size / 2 + 4);
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -227,7 +257,7 @@ function drawQrPlaceholder(ctx, x, y, size, url) {
     img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}`;
 }
 
-export function initCanvasShare(result) {
+export function initCanvasShare(result, onDone, onFail) {
     const canvas = document.getElementById('shareCanvas');
     const ctx = canvas.getContext('2d');
     canvas.width = 800;
@@ -291,12 +321,15 @@ export function initCanvasShare(result) {
     ctx.font = '13px Inter, sans-serif';
     ctx.fillText('Công cụ giáo dục — không thay thế cảnh báo chính thức', 40, 632);
 
-    const finalize = () => {
-        const link = document.createElement('a');
-        link.download = `scamcheck-${Date.now()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    };
-
-    setTimeout(finalize, 600);
+    setTimeout(() => {
+        try {
+            const link = document.createElement('a');
+            link.download = `scamcheck-${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            if (onDone) onDone();
+        } catch (err) {
+            if (onFail) onFail(err);
+        }
+    }, 600);
 }

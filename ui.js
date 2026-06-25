@@ -3,6 +3,9 @@ import { buildHighlightedHtml } from './parseResult.js';
 export const UI = {
     // Elements
     messageInput: document.getElementById('messageInput'),
+    inputBox: document.getElementById('inputBox'),
+    inputError: document.getElementById('inputError'),
+    charCount: document.getElementById('charCount'),
     checkBtn: document.getElementById('checkBtn'),
     voiceBtn: document.getElementById('voiceBtn'),
     pasteBtn: document.getElementById('pasteBtn'),
@@ -34,6 +37,8 @@ export const UI = {
     linkInput: document.getElementById('linkInput'),
     scanLinkBtn: document.getElementById('scanLinkBtn'),
     linkScanResult: document.getElementById('linkScanResult'),
+    linkScanError: document.getElementById('linkScanError'),
+    shareNotice: document.getElementById('shareNotice'),
     libraryGrid: document.getElementById('libraryGrid'),
     ttsToggle: document.getElementById('ttsToggle'),
 
@@ -42,7 +47,63 @@ export const UI = {
     crisisLocked: false,
     lastAnalysisContext: null,
 
+    showInputError(message) {
+        this.inputError.textContent = message;
+        this.inputError.classList.remove('hidden');
+        this.inputBox.classList.remove('border-slate-100', 'focus-within:border-primary/30');
+        this.inputBox.classList.add('border-danger', 'border-2');
+        this.messageInput.focus();
+        this.inputError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    },
+
+    clearInputError() {
+        this.inputError.textContent = '';
+        this.inputError.classList.add('hidden');
+        this.inputBox.classList.remove('border-danger');
+        this.inputBox.classList.add('border-slate-100');
+    },
+
+    updateCharCount(length, max = 5000) {
+        this.charCount.textContent = `${length} / ${max} ký tự`;
+        if (length > max) {
+            this.charCount.className = 'text-sm text-danger font-bold';
+        } else if (length > max * 0.9) {
+            this.charCount.className = 'text-sm text-warning font-bold';
+        } else {
+            this.charCount.className = 'text-sm text-muted font-semibold';
+        }
+    },
+
+    showLinkError(message) {
+        this.linkScanError.textContent = message;
+        this.linkScanError.classList.remove('hidden');
+        this.linkScanResult.classList.add('hidden');
+        this.linkScanError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    },
+
+    clearLinkError() {
+        this.linkScanError.textContent = '';
+        this.linkScanError.classList.add('hidden');
+    },
+
+    showShareNotice(message, type = 'warning') {
+        this.shareNotice.textContent = message;
+        this.shareNotice.classList.remove('hidden', 'bg-amber-50', 'border-amber-200', 'text-amber-900', 'bg-green-50', 'border-green-200', 'text-green-800');
+        if (type === 'success') {
+            this.shareNotice.classList.add('bg-green-50', 'border-green-200', 'text-green-800');
+        } else {
+            this.shareNotice.classList.add('bg-amber-50', 'border-amber-200', 'text-amber-900');
+        }
+        this.shareNotice.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    },
+
+    clearShareNotice() {
+        this.shareNotice.classList.add('hidden');
+        this.shareNotice.textContent = '';
+    },
+
     showLoading() {
+        this.clearInputError();
         this.resultArea.classList.remove('hidden');
         this.loadingState.classList.remove('hidden');
         this.resultDashboard.classList.add('hidden');
