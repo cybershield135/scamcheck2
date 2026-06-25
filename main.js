@@ -31,6 +31,9 @@ function getFriendlyErrorMessage(error) {
     if (message.includes('quota') || message.includes('429')) {
         return 'Hệ thống đang quá tải. Bác chờ 1 phút rồi thử lại nhé.';
     }
+    if (message.includes('high demand') || message.includes('overloaded') || message.includes('unavailable')) {
+        return 'AI Google đang quá tải tạm thời. Bác chờ 30 giây rồi bấm Kiểm tra lại nhé — không phải lỗi tài khoản của bạn.';
+    }
     return 'Có lỗi khi phân tích. Bác thử lại sau hoặc hỏi người thân trước khi làm theo tin nhắn.';
 }
 

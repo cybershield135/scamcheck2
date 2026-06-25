@@ -1,6 +1,28 @@
-const API_URL =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
+// Thử model nhẹ trước (ít bị "high demand"), rồi fallback
+const MODEL_FALLBACKS = [
+    process.env.GEMINI_MODEL,
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash-lite"
+].filter(Boolean).filter((m, i, arr) => arr.indexOf(m) === i);
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isRetryable(status, message = "") {
+    const msg = message.toLowerCase();
+    return (
+        status === 429 ||
+        status === 503 ||
+        status === 500 ||
+        msg.includes("high demand") ||
+        msg.includes("overloaded") ||
+        msg.includes("resource exhausted") ||
+        msg.includes("unavailable") ||
+        msg.includes("try again")
+    );
+}
 const DETECTIVE_PROMPT = (text) => `
 Bạn là Thám tử AI — chuyên gia phân tích lừa đảo tại Việt Nam.
 Giọng khô khan, lý tính, như điều tra viên. Không trấn an, không đồng cảm.
@@ -55,26 +77,54 @@ Trả về duy nhất JSON:
 `;
 
 async function callGemini(apiKey, prompt) {
-    const response = await fetch(`${API_URL}?key=${apiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
-        })
-    });
+    let lastError = new Error("Gemini API request failed");
 
-    const data = await response.json();
+    for (const model of MODEL_FALLBACKS) {
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const url = `${BASE_URL}/${model}:generateContent?key=${apiKey}`;
 
-    if (!response.ok) {
-        throw new Error(data.error?.message || "Gemini API request failed");
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    const msg = data.error?.message || "Gemini API request failed";
+                    lastError = new Error(msg);
+                    if (isRetryable(response.status, msg)) {
+                        await sleep(500 * 2 ** attempt);
+                        continue;
+                    }
+                    throw lastError;
+                }
+
+                const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!resultText) {
+                    lastError = new Error("Empty Gemini response");
+                    continue;
+                }
+
+                console.log(`Gemini OK: ${model} (attempt ${attempt + 1})`);
+                return resultText;
+            } catch (error) {
+                lastError = error;
+                if (isRetryable(0, error.message)) {
+                    await sleep(500 * 2 ** attempt);
+                    continue;
+                }
+                throw error;
+            }
+        }
+        console.warn(`Model ${model} unavailable, trying next...`);
     }
 
-    const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!resultText) {
-        throw new Error("Empty Gemini response");
-    }
-
-    return resultText;
+    throw lastError;
 }
 
 function extractJson(text) {
